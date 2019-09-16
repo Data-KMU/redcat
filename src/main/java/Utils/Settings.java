@@ -1,5 +1,8 @@
 package Utils;
 
+import org.apache.kafka.common.protocol.types.Field;
+
+import javax.swing.text.StyledEditorKit;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
@@ -38,12 +41,22 @@ public class Settings {
 
     }
 
-    public Properties getProperties(){
+    public Properties getAllSettings(){
         return this.commandLineArguments;
     }
 
+    public int getInt(String propertyName){
+        return Integer.valueOf(this.get(propertyName));
+    }
+    public boolean getBoolean(String propertyName){
+        return Boolean.valueOf(this.get(propertyName));
+    }
+    public String get(String propertyName){
+        return this.commandLineArguments.getProperty(propertyName);
+    }
+
     public boolean isDebug(){
-        return Boolean.valueOf(this.getProperties().getProperty("app.debug"));
+        return this.getBoolean("app.debug");
     }
 
 }

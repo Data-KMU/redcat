@@ -1,15 +1,12 @@
 package Database;
 
+import Interfaces.Service;
 import Utils.Settings;
 import com.mongodb.async.client.MongoClient;
 import com.mongodb.async.client.MongoClients;
-import com.mongodb.async.client.MongoCollection;
 import com.mongodb.async.client.MongoDatabase;
-import org.bson.Document;
 
-import java.util.Properties;
-
-public class Mongo implements AutoCloseable {
+public class Mongo implements Service {
 
     private static final String DEFAULT_DB_NAME = "digTwin";
 
@@ -26,15 +23,15 @@ public class Mongo implements AutoCloseable {
     }
 
     public void openConnection(){
-        Properties properties = Settings.getInstance().getProperties();
+        Settings settings = Settings.getInstance();
 
-        this.mongoClient = MongoClients.create(properties.getProperty("mongo.connection"));
+        this.mongoClient = MongoClients.create(settings.get("mongo.connection"));
         this.digTwin = mongoClient.getDatabase(DEFAULT_DB_NAME);
     }
 
-    public MongoCollection<Document> insert(){
-        this.digTwin.createCollection();
-    }
+//    public MongoCollection<Document> insert(){
+////        this.digTwin.createCollection();
+//    }
 
 
     @Override

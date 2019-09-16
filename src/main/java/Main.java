@@ -1,3 +1,4 @@
+import Broker.KafkaClient;
 import Database.Mongo;
 import Utils.Settings;
 
@@ -10,13 +11,13 @@ public class Main {
         //init settings
         Settings.getInstance().load(args);
 
-//        Settings.getInstance().getProperties().keySet().forEach(System.out::println);
-
         System.out.println(Settings.getInstance().isDebug());
 
 
         //init db
         Mongo.getInstance().openConnection();
+
+        KafkaClient.getInstance().openConnection();
 
 
 
