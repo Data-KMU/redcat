@@ -1,0 +1,21 @@
+#Server Config
+server:
+  port: 8080
+
+#App at.kara.carinfra.config
+app:
+  production: false
+  enableDebugController: true
+
+spring:
+  kafka:
+    consumer:
+      bootstrap-servers: 46.101.136.244:9092
+      group-id: dig-twin
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+#    producer:
+#      bootstrap-servers: 46.101.136.244:9092
+#      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+#      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
