@@ -1,4 +1,4 @@
-package at.kara.infra.digtiwn.controller;
+package io.taaja.redcat.controller;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.http.ResponseEntity;

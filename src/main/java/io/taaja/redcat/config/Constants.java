@@ -1,4 +1,4 @@
-package at.kara.infra.digtiwn.config;
+package io.taaja.redcat.config;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;

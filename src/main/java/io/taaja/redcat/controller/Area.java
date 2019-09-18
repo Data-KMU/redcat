@@ -1,6 +1,6 @@
-package at.kara.infra.digtiwn.controller;
+package io.taaja.redcat.controller;
 
-import at.kara.infra.digtiwn.config.Constants;
+import io.taaja.redcat.config.Constants;
 import org.springframework.web.bind.annotation.*;
 
 @RestController

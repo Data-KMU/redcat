@@ -1,4 +1,4 @@
-package at.kara.infra.digtiwn;
+package io.taaja.redcat;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;

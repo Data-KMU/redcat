@@ -1,4 +1,4 @@
-package at.kara.infra.digtiwn.services;
+package io.taaja.redcat.services;
 
 
 import org.slf4j.Logger;

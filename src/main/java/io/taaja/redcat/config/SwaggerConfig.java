@@ -1,4 +1,4 @@
-package at.kara.infra.digtiwn.config;
+package io.taaja.redcat.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

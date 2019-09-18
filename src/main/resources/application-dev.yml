@@ -8,6 +8,12 @@ app:
   enableDebugController: true
 
 spring:
+  data:
+    mongodb:
+      database: digitalTwin
+      host: localhost
+      port: 27017
+
   kafka:
     consumer:
       bootstrap-servers: 46.101.136.244:9092
