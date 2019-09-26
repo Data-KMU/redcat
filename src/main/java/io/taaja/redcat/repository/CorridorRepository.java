@@ -4,6 +4,7 @@ package io.taaja.redcat.repository;
 import io.taaja.redcat.model.CorridorModel;
 import org.springframework.data.mongodb.repository.ReactiveMongoRepository;
 import org.springframework.stereotype.Repository;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 /**
@@ -12,6 +13,8 @@ import reactor.core.publisher.Mono;
 @Repository
 public interface CorridorRepository extends ReactiveMongoRepository<CorridorModel, String> {
 
-    Mono<CorridorModel> findByTitle(String title);
+    Flux<CorridorModel> findByTitle(String title);
+
+    Flux<CorridorModel> findTopByCreatedDate();
 
 }

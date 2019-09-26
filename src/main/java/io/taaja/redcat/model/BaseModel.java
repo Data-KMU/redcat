@@ -5,7 +5,7 @@ import lombok.Setter;
 import org.springframework.data.annotation.*;
 
 import java.io.Serializable;
-import java.util.Date;
+import java.util.Calendar;
 
 @Setter
 @Getter
@@ -13,20 +13,13 @@ public abstract class BaseModel implements Serializable {
     @Id
     private String id;
 
-    @CreatedBy
-    private String createdBy;
-
     @CreatedDate
-    private Date createdDate;
-
-    @LastModifiedBy
-    private String updatedBy;
+    private Calendar createdDate;
 
     @LastModifiedDate
-    private Date updatedDate;
+    private Calendar updatedDate;
 
     @Version
     private Long version;
 
-    private Boolean delete = Boolean.FALSE;
 }

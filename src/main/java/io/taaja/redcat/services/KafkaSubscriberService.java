@@ -1,6 +1,7 @@
 package io.taaja.redcat.services;
 
 
+import io.taaja.redcat.config.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -16,9 +17,9 @@ public class KafkaSubscriberService {
 
     Logger logger = LoggerFactory.getLogger(KafkaSubscriberService.class);
 
-    @KafkaListener(topics = "posUpdate")
+    @KafkaListener(topics = Constants.TOPIC_VEHICLE)
     public void posUpdate(String message){
-        logger.info(String.format("$$ -> Consumed Message -> %s",message));
+        logger.info(String.format("Vehicle update %s",message));
     }
 
 }
