@@ -1,0 +1,39 @@
+app:
+  database: "taaja"
+
+
+kafka:
+  bootstrap-servers: "46.101.136.244:9092"
+  poll-records: 100
+  auto-commit: false
+  offset-reset: "latest"
+
+  prefix:
+    zone: "zone"
+    vehicle-data: "vehicle-data"
+
+
+quarkus:
+  http:
+    port: 8092
+    cors: true
+  mongodb:
+    connection-string: mongodb://taaja-mongodb:27017
+
+
+
+"%dev":
+  app:
+    database: "dev-taaja"
+
+  quarkus:
+    mongodb:
+      connection-string: mongodb://localhost:27017
+
+"%test":
+  app:
+    database: "test-taaja"
+
+  quarkus:
+    mongodb:
+      connection-string: mongodb://localhost:27017
