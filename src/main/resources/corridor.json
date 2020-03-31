@@ -1,0 +1,35 @@
+{
+  "_id": "bf6a9170-e9f7-42f7-bd4d-1a9c2bd3fde0",
+  "type": "Corridor",
+  "shape": "circular",
+  "coordinates": [
+    [
+      [
+        47.581322,
+        12.170243,
+        750,
+        {
+          "radius": 3,
+          "junction" : [
+            {
+              "_id" : "bf6a9170-e9f7-42f7-bd4d-1a9c2bd3fde0",
+              "type": "Area"
+            }
+          ],
+          "trafficable": true
+        }
+      ], [
+        47.681322,
+        12.270243,
+        760,
+        {
+          "radius": 4.5
+        }
+      ],[
+          47.581322,
+          12.170243,
+          750
+      ]
+    ]
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "_id": "d80278f0-c3a0-43f6-a260-540d69a1b408",
+  "type": "Area",
+  "elevation": 600,
+  "height": 200,
+  "coordinates": [
+    [
+      [
+        47.581322,
+        12.170243
+      ], [
+        47.681322,
+        12.270243
+      ],[
+        47.581322,
+        12.170243
+      ]
+    ]
+  ],
+  "actuators": {
+    "c9d56188-e52b-4f0e-9ee9-ae4e2ae1b8e0": {
+      "@context": {
+        "Car": "https://schema.org/Car",
+        "position": "https://schema.org/GeoCoordinates",
+        "longitude": "https://schema.org/longitude",
+        "latitude": "https://schema.org/latitude",
+        "created": "https://schema.org/dateCreated",
+        "modified": "https://schema.org/dateModified"
+      },
+      "@type": "Car",
+      "position": {
+        "longitude": 47.581322,
+        "latitude": 12.170243
+      },
+      "created" : 1582482550,
+      "modified" : 1582482567
+    }
+  },
+  "samplers": null,
+  "sensors": null
+}

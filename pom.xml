@@ -29,7 +29,20 @@
       </dependency>
     </dependencies>
   </dependencyManagement>
+
+    <repositories>
+        <repository>
+            <id>weagree-io-snapshots</id>
+            <url>https://repository.kara-software.at/repository/taaja</url>
+        </repository>
+    </repositories>
+
   <dependencies>
+    <dependency>
+        <groupId>io.taaja</groupId>
+        <artifactId>shared</artifactId>
+        <version>1.5</version>
+    </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-resteasy</artifactId>
@@ -48,18 +61,30 @@
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-logging-gelf</artifactId>
     </dependency>
+<!--    <dependency>-->
+<!--      <groupId>io.quarkus</groupId>-->
+<!--      <artifactId>quarkus-quartz</artifactId>-->
+<!--    </dependency>-->
     <dependency>
       <groupId>io.quarkus</groupId>
-      <artifactId>quarkus-kafka-client</artifactId>
+      <artifactId>quarkus-mongodb-client</artifactId>
     </dependency>
+
+    <!-- https://mvnrepository.com/artifact/org.mongojack/mongojack -->
     <dependency>
-      <groupId>io.quarkus</groupId>
-      <artifactId>quarkus-quartz</artifactId>
+      <groupId>org.mongojack</groupId>
+      <artifactId>mongojack</artifactId>
+      <version>LATEST</version>
     </dependency>
+
+    <!-- https://mvnrepository.com/artifact/org.projectlombok/lombok -->
     <dependency>
-      <groupId>io.quarkus</groupId>
-      <artifactId>quarkus-undertow-websockets</artifactId>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+      <version>LATEST</version>
     </dependency>
+
+
     <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-config-yaml</artifactId>
@@ -67,6 +92,11 @@
     <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-resteasy-jackson</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.kafka</groupId>
+      <artifactId>kafka-clients</artifactId>
+      <version>LATEST</version>
     </dependency>
   </dependencies>
   <build>
