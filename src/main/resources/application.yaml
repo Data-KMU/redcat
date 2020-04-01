@@ -7,6 +7,7 @@ kafka:
   poll-records: 100
   auto-commit: false
   offset-reset: "latest"
+  group-id: "redcat"
 
   prefix:
     zone: "zone"

@@ -1,7 +1,12 @@
 package at.taaja.redcat;
 
+import at.taaja.redcat.model.AbstractExtension;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
+import io.quarkus.runtime.ShutdownEvent;
 import io.quarkus.runtime.StartupEvent;
-import io.taaja.Constants;
+import io.taaja.messaging.Topics;
 import lombok.extern.jbosslog.JBossLog;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -19,6 +24,8 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.Properties;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 
@@ -41,41 +48,86 @@ public class KafkaDataService {
     @ConfigProperty(name = "kafka.offset-reset")
     private String offsetReset;
 
-    ConsumerWorker areaWorker, corridorWorker;
+    @ConfigProperty(name = "kafka.group-id")
+    private String groupId;
 
+    ExtensionLivDataConsumer livDataConsumer;
+    private ExecutorService executor;
 
-    private static class ConsumerWorker extends Thread implements Closeable {
+    private ObjectMapper objectMapper;
 
-        private final String topicPrefix;
-        private final AtomicBoolean running = new AtomicBoolean(true);
-        private final Properties properties;
+    private class KafkaRecordHandler implements Runnable {
 
+        private final ConsumerRecord<Long, String> record;
 
-
-        private ConsumerWorker(String topicPrefix, Properties properties) {
-            this.topicPrefix = topicPrefix;
-            properties.put(ConsumerConfig.CLIENT_ID_CONFIG, "client-" + UUID.randomUUID().toString());
-            this.properties = properties;
-            this.setName(topicPrefix + "-consumer");
+        public KafkaRecordHandler(ConsumerRecord<Long, String> record) {
+            this.record = record;
         }
 
         @Override
         public void run() {
-            KafkaConsumer kafkaConsumer = new KafkaConsumer(this.properties, new LongDeserializer(), new StringDeserializer());
-            kafkaConsumer.subscribe(Pattern.compile(topicPrefix + ".*"));
-            while (this.running.get()){
 
-                ConsumerRecords<Long, String> records = kafkaConsumer.poll(Duration.ofMillis(100));
-                for(ConsumerRecord<Long, String> record : records){
+            try {
+                String id = this.getIdFromTopic(record.topic());
 
+                log.info("update extension " + id);
+
+                AbstractExtension extension = KafkaDataService.this.zoneRepository.getExtension(id);
+
+                if(extension == null){
+                    throw new NullPointerException("Extension cant be found. id " + id);
                 }
 
+                ObjectReader updater = objectMapper.readerForUpdating(extension);
+                Object updatedExtension = updater.readValue(record.value());
+
+                //parse to validate
+                AbstractExtension abstractExtension = objectMapper.convertValue(updatedExtension, AbstractExtension.class);
+
+                if(! id.equals(abstractExtension.getId())){
+                    throw new Exception("Id change is not allowed new id: " + abstractExtension.getId() + ", old id: " + id);
+                }
+
+                KafkaDataService.this.zoneRepository.update(id, updatedExtension);
+
+            } catch (Exception e) {
+                log.error("cant parse object: " + e.getMessage(), e);
             }
-
-            kafkaConsumer.close();
-
         }
 
+        private String getIdFromTopic(String topic){
+            return topic.substring(Topics.SPATIAL_EXTENSION_LIFE_DATA_TOPIC_PREFIX.length());
+        }
+
+    }
+
+    private class ExtensionLivDataConsumer extends Thread implements Closeable {
+
+        private final AtomicBoolean running = new AtomicBoolean(true);
+        private final Properties consumerProperties = new Properties();
+
+        private ExtensionLivDataConsumer() {
+            consumerProperties.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, KafkaDataService.this.bootstrapServers);
+            consumerProperties.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, KafkaDataService.this.pollRecords);
+            consumerProperties.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, KafkaDataService.this.autoCommit);
+            consumerProperties.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, KafkaDataService.this.offsetReset);
+            consumerProperties.put(ConsumerConfig.GROUP_ID_CONFIG, KafkaDataService.this.groupId);
+            consumerProperties.put(ConsumerConfig.CLIENT_ID_CONFIG, KafkaDataService.this.groupId + "-" + UUID.randomUUID().toString());
+            this.setName(this.getClass().getSimpleName());
+        }
+
+        @Override
+        public void run() {
+            KafkaConsumer kafkaConsumer = new KafkaConsumer(this.consumerProperties, new LongDeserializer(), new StringDeserializer());
+            kafkaConsumer.subscribe(Pattern.compile(Topics.SPATIAL_EXTENSION_LIFE_DATA_TOPIC_PREFIX + ".*"));
+            while (this.running.get()){
+                ConsumerRecords<Long, String> records = kafkaConsumer.poll(Duration.ofMillis(100));
+                for(ConsumerRecord<Long, String> record : records){
+                    KafkaDataService.this.executor.submit(new KafkaRecordHandler(record));
+                }
+            }
+            kafkaConsumer.close();
+        }
 
         @Override
         public void close() throws IOException {
@@ -85,17 +137,15 @@ public class KafkaDataService {
 
 
     void onStart(@Observes StartupEvent ev) {
+        this.objectMapper = new ObjectMapper();
+        this.executor = Executors.newCachedThreadPool();
+        this.livDataConsumer = new ExtensionLivDataConsumer();
+        this.livDataConsumer.start();
+    }
 
-        Properties consumerProperties = new Properties();
-        consumerProperties.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, this.bootstrapServers);
-        consumerProperties.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, this.pollRecords);
-        consumerProperties.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, this.autoCommit);
-        consumerProperties.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, this.offsetReset);
-        consumerProperties.put(ConsumerConfig.GROUP_ID_CONFIG, "redcat");
-
-        this.areaWorker = new ConsumerWorker(Constants.KAFKA_AREA_TOPIC_PREFIX, (Properties)consumerProperties.clone());
-        this.corridorWorker = new ConsumerWorker(Constants.KAFKA_CORRIDOR_TOPIC_PREFIX, (Properties)consumerProperties.clone());
-
+    void onStop(@Observes ShutdownEvent ev) throws IOException {
+        this.livDataConsumer.close();
+        this.executor.shutdown();
     }
 
 }

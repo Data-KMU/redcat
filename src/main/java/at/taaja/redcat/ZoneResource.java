@@ -1,14 +1,19 @@
 package at.taaja.redcat;
 
-import at.taaja.redcat.model.Area;
-import at.taaja.redcat.model.Corridor;
+import at.taaja.redcat.model.AbstractExtension;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
+import io.taaja.messaging.Topics;
+import lombok.SneakyThrows;
 
 import javax.inject.Inject;
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
+import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import java.util.Map;
 
 @Path("/v1/")
 @Produces(MediaType.APPLICATION_JSON)
@@ -18,30 +23,48 @@ public class ZoneResource {
     ZoneRepository zoneRepository;
 
     @GET
-    @Path("area/{id}")
-    public Area getArea(@PathParam("id") String areaId) {
-        return zoneRepository.getArea(areaId);
+    @Path("extension/{id}")
+    public AbstractExtension getExtension(@PathParam("id") String extensionId) {
+        return zoneRepository.getExtension(extensionId);
     }
 
 
-    @GET
-    @Path("corridor/{id}")
-    public Corridor getCorridor(@PathParam("id") String corridorId) {
-        return zoneRepository.getCorridor(corridorId);
+
+    @POST
+    @Path("extension")
+    public Response addExtension(AbstractExtension abstractExtension) {
+        this.zoneRepository.insertExtension(abstractExtension);
+        return Response.ok().build();
     }
 
 
-//    @POST
-//    public Response addExtension(AbstractExtension abstractExtension) {
-//
-//        abstractExtension.setId(UUID.randomUUID().toString());
-//        this.zoneRepository.insertExtension(abstractExtension);
-//
-//        return Response.ok().build();
-//    }
 
 
+    @SneakyThrows
+    @POST
+    @Path("test")
+    public Response test(String s){
+        ObjectMapper objectMapper = new ObjectMapper();
+        ObjectReader objectReader = objectMapper.reader();
 
+        String topic = "spatial-life-data-c56b3543-6853-4d86-a7bc-1cde673a5582";
 
+        String id = this.getIdFromTopic(topic);
+
+        Object extension = this.zoneRepository.getExtensionAsObject(id);
+
+        ObjectReader updater = objectMapper.readerForUpdating(extension);
+        Object updatedExtension = updater.readValue(s);
+
+        AbstractExtension abstractExtension = objectMapper.convertValue(updatedExtension, AbstractExtension.class);
+
+        this.zoneRepository.update(id, updatedExtension);
+
+        return Response.ok().build();
+    }
+
+    private String getIdFromTopic(String topic){
+        return topic.substring(Topics.SPATIAL_EXTENSION_LIFE_DATA_TOPIC_PREFIX.length());
+    }
 
 }

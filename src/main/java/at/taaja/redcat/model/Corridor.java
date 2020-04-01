@@ -1,8 +1,6 @@
 package at.taaja.redcat.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonValue;
-import io.taaja.models.zoning.Extension;
 import lombok.Data;
 
 import java.util.List;

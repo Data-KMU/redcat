@@ -177,7 +177,12 @@
         <SOURCES />
       </library>
     </orderEntry>
-    <orderEntry type="library" name="Maven: io.taaja:shared:1.5" level="project" />
+    <orderEntry type="library" name="Maven: io.taaja:shared:1.10" level="project" />
+    <orderEntry type="library" name="Maven: com.fasterxml.jackson.core:jackson-core:2.9.10" level="project" />
+    <orderEntry type="library" name="Maven: com.fasterxml.jackson.core:jackson-annotations:2.9.10" level="project" />
+    <orderEntry type="library" name="Maven: commons-codec:commons-codec:1.13" level="project" />
+    <orderEntry type="library" name="Maven: org.jboss.logging:jboss-logging:3.3.2.Final" level="project" />
+    <orderEntry type="library" name="Maven: javax.inject:javax.inject:1" level="project" />
     <orderEntry type="library" name="Maven: io.quarkus:quarkus-resteasy:1.1.1.Final" level="project" />
     <orderEntry type="library" name="Maven: io.quarkus:quarkus-vertx-http:1.1.1.Final" level="project" />
     <orderEntry type="library" name="Maven: io.quarkus.security:quarkus-security:1.0.1.Final" level="project" />
@@ -256,7 +261,6 @@
     <orderEntry type="library" scope="TEST" name="Maven: org.apache.maven.wagon:wagon-http-shared:3.0.0" level="project" />
     <orderEntry type="library" scope="TEST" name="Maven: org.jsoup:jsoup:1.7.2" level="project" />
     <orderEntry type="library" scope="TEST" name="Maven: org.apache.maven.wagon:wagon-file:3.0.0" level="project" />
-    <orderEntry type="library" name="Maven: org.jboss.logging:jboss-logging:3.3.2.Final" level="project" />
     <orderEntry type="library" scope="TEST" name="Maven: org.jboss.logging:commons-logging-jboss-logging:1.0.0.Final" level="project" />
     <orderEntry type="library" scope="TEST" name="Maven: io.quarkus:quarkus-test-common:1.1.1.Final" level="project" />
     <orderEntry type="library" scope="TEST" name="Maven: io.quarkus:quarkus-core-deployment:1.1.1.Final" level="project" />
@@ -291,7 +295,6 @@
     <orderEntry type="library" scope="TEST" name="Maven: org.codehaus.groovy:groovy-xml:2.5.8" level="project" />
     <orderEntry type="library" scope="TEST" name="Maven: org.apache.httpcomponents:httpclient:4.5.10" level="project" />
     <orderEntry type="library" scope="TEST" name="Maven: org.apache.httpcomponents:httpcore:4.4.12" level="project" />
-    <orderEntry type="library" scope="TEST" name="Maven: commons-codec:commons-codec:1.13" level="project" />
     <orderEntry type="library" scope="TEST" name="Maven: org.apache.httpcomponents:httpmime:4.5.3" level="project" />
     <orderEntry type="library" scope="TEST" name="Maven: org.hamcrest:hamcrest:2.1" level="project" />
     <orderEntry type="library" scope="TEST" name="Maven: org.ccil.cowan.tagsoup:tagsoup:1.2.1" level="project" />
@@ -333,8 +336,6 @@
     <orderEntry type="library" name="Maven: org.mongodb:bson:3.12.0" level="project" />
     <orderEntry type="library" name="Maven: org.mongodb:mongodb-driver-core:3.12.0" level="project" />
     <orderEntry type="library" name="Maven: com.fasterxml.jackson.core:jackson-databind:2.9.10.2" level="project" />
-    <orderEntry type="library" name="Maven: com.fasterxml.jackson.core:jackson-annotations:2.9.10" level="project" />
-    <orderEntry type="library" name="Maven: com.fasterxml.jackson.core:jackson-core:2.9.10" level="project" />
     <orderEntry type="library" name="Maven: com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.9.10" level="project" />
     <orderEntry type="library" name="Maven: javax.persistence:javax.persistence-api:2.2" level="project" />
     <orderEntry type="library" name="Maven: commons-io:commons-io:2.6" level="project" />

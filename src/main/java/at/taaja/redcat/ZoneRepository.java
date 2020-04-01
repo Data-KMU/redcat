@@ -6,6 +6,7 @@ import at.taaja.redcat.model.Corridor;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.MongoClient;
 import io.quarkus.runtime.StartupEvent;
+import org.bson.BsonDocument;
 import org.bson.Document;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.mongojack.JacksonMongoCollection;
@@ -28,51 +29,41 @@ public class ZoneRepository{
     @ConfigProperty(name = "app.database")
     public String database;
 
-    private JacksonMongoCollection<Corridor> corridor;
-    private JacksonMongoCollection<Area> area;
+    private JacksonMongoCollection<AbstractExtension> extensionCollection;
+    private JacksonMongoCollection<Object> objectCollection;
 
     void onStart(@Observes StartupEvent ev) {
-        corridor = JacksonMongoCollection
+        extensionCollection = JacksonMongoCollection
                 .builder()
-                .build(this.mongoClient, this.database, "corridor", Corridor.class);
+                .build(this.mongoClient, this.database, "extension", AbstractExtension.class);
 
-       area = JacksonMongoCollection
+        objectCollection = JacksonMongoCollection
                 .builder()
-                .build(this.mongoClient, this.database, "area", Area.class);
+                .build(this.mongoClient, this.database, "extension", Object.class);
     }
 
 
-//    public CompletionStage<Optional<Area>> getArea(String areaId){
-//        return reactiveMongoClient
-//                .getDatabase(this.database)
-//                .getCollection("area", Area.class)
-//                .find(Filters.eq("_id", areaId)).findFirst().run();
-//
-//    }
 
-    public Area getArea(String areaId){
-        return this.area.find(Filters.eq("_id", areaId)).first();
+
+    public AbstractExtension getExtension(String extensionId){
+        return this.extensionCollection.find(Filters.eq("_id", extensionId)).first();
     }
 
-    public Corridor getCorridor(String corridorId){
-        return this.corridor.find(Filters.eq("_id", corridorId)).first();
+    public Object getExtensionAsObject(String extensionId){
+        return this.objectCollection
+                .find(Filters.eq("_id", extensionId)).first();
     }
+
 
     public void insertExtension(AbstractExtension abstractExtension) {
-        if(abstractExtension instanceof Corridor){
-            JacksonMongoCollection
-                    .builder()
-                    .build(this.mongoClient, this.database, "corridor",  Corridor.class)
-                    .insertOne((Corridor) abstractExtension);
-        }else if(abstractExtension instanceof Area){
-            JacksonMongoCollection
-                    .builder()
-                    .build(this.mongoClient, this.database, "area",  Area.class)
-                    .insertOne((Area) abstractExtension);
-
-        }
-
+        this.extensionCollection.insertOne(abstractExtension);
     }
 
 
+    public void update(String extensionId, Object updatedExtension) {
+        this.objectCollection.replaceOne(
+                Filters.eq("_id", extensionId),
+                updatedExtension
+        );
+    }
 }
