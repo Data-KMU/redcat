@@ -1,6 +1,7 @@
 package at.taaja.redcat.model;
 
 import com.fasterxml.jackson.annotation.JsonValue;
+import io.taaja.models.spatial.ExtensionType;
 import lombok.Data;
 
 import java.util.List;
@@ -25,5 +26,9 @@ public class Corridor extends AbstractExtension {
 
     private ShapeType shape;
     private List<List<Waypoint>> coordinates;
+
+    public Corridor(){
+        this.setType(ExtensionType.Corridor);
+    }
 
 }

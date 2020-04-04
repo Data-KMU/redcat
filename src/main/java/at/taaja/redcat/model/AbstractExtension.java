@@ -1,12 +1,10 @@
 package at.taaja.redcat.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.taaja.models.spatial.info.ExtensionIdentity;
 import lombok.Data;
-import org.mongojack.Id;
 
 @Data
 @JsonTypeInfo(

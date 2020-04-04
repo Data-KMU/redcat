@@ -1,19 +1,14 @@
 package at.taaja.redcat;
 
 import at.taaja.redcat.model.AbstractExtension;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectReader;
-import io.taaja.messaging.Topics;
-import lombok.SneakyThrows;
+import at.taaja.redcat.model.Area;
 
 import javax.inject.Inject;
-import javax.ws.rs.*;
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
+import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
-import java.util.Map;
 
 @Path("/v1/")
 @Produces(MediaType.APPLICATION_JSON)
@@ -27,6 +22,13 @@ public class ZoneResource {
     public AbstractExtension getExtension(@PathParam("id") String extensionId) {
         return zoneRepository.getExtension(extensionId);
     }
+
+//    @GET
+//    @Path("test")
+//    public AbstractExtension getTest() {
+//        return new Area();
+//    }
+
 
 
 //    @POST

@@ -1,7 +1,7 @@
 package at.taaja.redcat;
 
 import at.taaja.redcat.model.AbstractExtension;
-import com.fasterxml.jackson.databind.JsonNode;
+import at.taaja.redcat.model.Area;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import io.quarkus.runtime.ShutdownEvent;
@@ -26,7 +26,6 @@ import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 
 @ApplicationScoped
@@ -51,7 +50,7 @@ public class KafkaDataService {
     @ConfigProperty(name = "kafka.group-id")
     private String groupId;
 
-    ExtensionLivDataConsumer livDataConsumer;
+    private ExtensionLivDataConsumer livDataConsumer;
     private ExecutorService executor;
 
     private ObjectMapper objectMapper;
@@ -75,7 +74,13 @@ public class KafkaDataService {
                 AbstractExtension extension = KafkaDataService.this.zoneRepository.getExtension(id);
 
                 if(extension == null){
-                    throw new NullPointerException("Extension cant be found. id " + id);
+                    if("c56b3543-6853-4d86-a7bc-1cde673a5582".equals(id)){
+                        //add new default area
+                        Area area = new Area();
+                        KafkaDataService.this.zoneRepository.addExtension(area);
+                    }else{
+                        throw new NullPointerException("Extension cant be found. id " + id);
+                    }
                 }
 
                 ObjectReader updater = objectMapper.readerForUpdating(extension);
@@ -103,7 +108,7 @@ public class KafkaDataService {
 
     private class ExtensionLivDataConsumer extends Thread implements Closeable {
 
-        private final AtomicBoolean running = new AtomicBoolean(true);
+        private volatile boolean running = true;
         private final Properties consumerProperties = new Properties();
 
         private ExtensionLivDataConsumer() {
@@ -120,7 +125,7 @@ public class KafkaDataService {
         public void run() {
             KafkaConsumer kafkaConsumer = new KafkaConsumer(this.consumerProperties, new LongDeserializer(), new StringDeserializer());
             kafkaConsumer.subscribe(Pattern.compile(Topics.SPATIAL_EXTENSION_LIFE_DATA_TOPIC_PREFIX + ".*"));
-            while (this.running.get()){
+            while (this.running){
                 ConsumerRecords<Long, String> records = kafkaConsumer.poll(Duration.ofMillis(100));
                 for(ConsumerRecord<Long, String> record : records){
                     KafkaDataService.this.executor.submit(new KafkaRecordHandler(record));
@@ -131,7 +136,7 @@ public class KafkaDataService {
 
         @Override
         public void close() throws IOException {
-            this.running.set(false);
+            this.running = false;
         }
     }
 

@@ -2,12 +2,9 @@ package at.taaja.redcat;
 
 import at.taaja.redcat.model.AbstractExtension;
 import at.taaja.redcat.model.Area;
-import at.taaja.redcat.model.Corridor;
-import com.mongodb.client.model.Filters;
 import com.mongodb.client.MongoClient;
+import com.mongodb.client.model.Filters;
 import io.quarkus.runtime.StartupEvent;
-import org.bson.BsonDocument;
-import org.bson.Document;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.mongojack.JacksonMongoCollection;
 
@@ -65,5 +62,9 @@ public class ZoneRepository{
                 Filters.eq("_id", extensionId),
                 updatedExtension
         );
+    }
+
+    public void addExtension(Area area) {
+        this.extensionCollection.insertOne(area);
     }
 }
