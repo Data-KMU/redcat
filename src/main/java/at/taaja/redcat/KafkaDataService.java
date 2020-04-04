@@ -77,9 +77,10 @@ public class KafkaDataService {
                     if("c56b3543-6853-4d86-a7bc-1cde673a5582".equals(id)){
                         //add new default area
                         Area area = new Area();
+                        area.setId("c56b3543-6853-4d86-a7bc-1cde673a5582");
                         KafkaDataService.this.zoneRepository.addExtension(area);
                     }else{
-                        throw new NullPointerException("Extension cant be found. id " + id);
+                        throw new NullPointerException("Extension cant be found. id: " + id);
                     }
                 }
 
