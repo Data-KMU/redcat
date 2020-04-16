@@ -1,42 +1,53 @@
 package at.taaja.redcat;
 
 import at.taaja.redcat.model.AbstractExtension;
-import at.taaja.redcat.model.Area;
+import io.taaja.models.spatial.operation.OperationType;
+import io.taaja.models.spatial.operation.SpatialOperation;
 
 import javax.inject.Inject;
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
+import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 
-@Path("/v1/")
+@Path("/v1/extension")
 @Produces(MediaType.APPLICATION_JSON)
 public class ZoneResource {
 
     @Inject
     ZoneRepository zoneRepository;
 
+    @Inject
+    KafkaProducerService kafkaProducerService;
+
     @GET
-    @Path("extension/{id}")
+    @Path("/{id}")
     public AbstractExtension getExtension(@PathParam("id") String extensionId) {
         return zoneRepository.getExtension(extensionId);
     }
 
-//    @GET
-//    @Path("test")
-//    public AbstractExtension getTest() {
-//        return new Area();
-//    }
 
+    @POST
+    public SpatialOperation addExtension(AbstractExtension abstractExtension) {
+        this.zoneRepository.insertExtension(abstractExtension);
+        SpatialOperation spatialOperation = new SpatialOperation();
+        spatialOperation.setOperationType(OperationType.Created);
+        spatialOperation.setTargetId(abstractExtension.getId());
+        this.kafkaProducerService.publish(spatialOperation);
+        return spatialOperation;
+    }
 
+    @DELETE
+    @Path("/{id}")
+    public SpatialOperation removeExtension(@PathParam("id") String extensionId) {
+        this.zoneRepository.removeExtension(extensionId);
 
-//    @POST
-//    @Path("extension")
-//    public Response addExtension(AbstractExtension abstractExtension) {
-//        this.zoneRepository.insertExtension(abstractExtension);
-//        return Response.ok().build();
-//    }
+        SpatialOperation spatialOperation = new SpatialOperation();
+        spatialOperation.setOperationType(OperationType.Removed);
+        spatialOperation.setTargetId(extensionId);
+        this.kafkaProducerService.publish(spatialOperation);
+
+        return spatialOperation;
+    }
 
 
 //    @SneakyThrows

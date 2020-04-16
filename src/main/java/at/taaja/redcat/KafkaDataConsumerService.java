@@ -4,6 +4,7 @@ import at.taaja.redcat.model.AbstractExtension;
 import at.taaja.redcat.model.Area;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
+import com.google.common.collect.Lists;
 import io.quarkus.runtime.ShutdownEvent;
 import io.quarkus.runtime.StartupEvent;
 import io.taaja.messaging.Topics;
@@ -22,15 +23,16 @@ import javax.inject.Inject;
 import java.io.Closeable;
 import java.io.IOException;
 import java.time.Duration;
-import java.util.Properties;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.regex.Pattern;
 
 @ApplicationScoped
 @JBossLog
-public class KafkaDataService {
+public class KafkaDataConsumerService {
+
+    public static final String MODIFIED = "modified";
 
     @Inject
     ZoneRepository zoneRepository;
@@ -71,14 +73,14 @@ public class KafkaDataService {
 
                 log.info("update extension " + id);
 
-                AbstractExtension extension = KafkaDataService.this.zoneRepository.getExtension(id);
+                AbstractExtension extension = KafkaDataConsumerService.this.zoneRepository.getExtension(id);
 
                 if(extension == null){
                     if("c56b3543-6853-4d86-a7bc-1cde673a5582".equals(id)){
                         //add new default area
                         Area area = new Area();
                         area.setId("c56b3543-6853-4d86-a7bc-1cde673a5582");
-                        KafkaDataService.this.zoneRepository.addExtension(area);
+                        KafkaDataConsumerService.this.zoneRepository.addExtension(area);
                     }else{
                         throw new NullPointerException("Extension cant be found. id: " + id);
                     }
@@ -94,10 +96,43 @@ public class KafkaDataService {
                     throw new Exception("Id change is not allowed new id: " + abstractExtension.getId() + ", old id: " + id);
                 }
 
-                KafkaDataService.this.zoneRepository.update(id, updatedExtension);
+                this.addOrCheckModify(abstractExtension);
+
+                KafkaDataConsumerService.this.zoneRepository.update(id, updatedExtension);
 
             } catch (Exception e) {
                 log.error("cant parse object: " + e.getMessage(), e);
+            }
+        }
+
+        private void addOrCheckModify(AbstractExtension abstractExtension) {
+
+            long now = System.currentTimeMillis();
+            long threshold = 5000; // 5sek
+
+            //root level
+            for (Object data : Lists.newArrayList(
+                    abstractExtension.getActuators(),
+                    abstractExtension.getSamplers(),
+                    abstractExtension.getSensors())
+            ){
+                try{
+                    //Map: vehicleId, vehicleData
+                    Map<String, Object> vehicleData = (Map)data;
+
+                    //for Entries (id -> Data)
+                    for (Map.Entry<String, Object> entry : vehicleData.entrySet()){
+
+                        //vehicle properties (data)
+                        Map<String, Object> dataEntry = (Map) entry.getValue();
+
+                        if(! dataEntry.containsKey(MODIFIED)){
+                            dataEntry.put(MODIFIED, new Date());
+                        }
+                    }
+                }catch (Exception e){
+                    log.error("cant update modified " + e.getMessage(), e);
+                }
             }
         }
 
@@ -113,12 +148,12 @@ public class KafkaDataService {
         private final Properties consumerProperties = new Properties();
 
         private ExtensionLivDataConsumer() {
-            consumerProperties.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, KafkaDataService.this.bootstrapServers);
-            consumerProperties.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, KafkaDataService.this.pollRecords);
-            consumerProperties.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, KafkaDataService.this.autoCommit);
-            consumerProperties.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, KafkaDataService.this.offsetReset);
-            consumerProperties.put(ConsumerConfig.GROUP_ID_CONFIG, KafkaDataService.this.groupId);
-            consumerProperties.put(ConsumerConfig.CLIENT_ID_CONFIG, KafkaDataService.this.groupId + "-" + UUID.randomUUID().toString());
+            consumerProperties.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, KafkaDataConsumerService.this.bootstrapServers);
+            consumerProperties.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, KafkaDataConsumerService.this.pollRecords);
+            consumerProperties.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, KafkaDataConsumerService.this.autoCommit);
+            consumerProperties.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, KafkaDataConsumerService.this.offsetReset);
+            consumerProperties.put(ConsumerConfig.GROUP_ID_CONFIG, KafkaDataConsumerService.this.groupId);
+            consumerProperties.put(ConsumerConfig.CLIENT_ID_CONFIG, KafkaDataConsumerService.this.groupId + "-" + UUID.randomUUID().toString());
             this.setName(this.getClass().getSimpleName());
         }
 
@@ -129,7 +164,7 @@ public class KafkaDataService {
             while (this.running){
                 ConsumerRecords<Long, String> records = kafkaConsumer.poll(Duration.ofMillis(100));
                 for(ConsumerRecord<Long, String> record : records){
-                    KafkaDataService.this.executor.submit(new KafkaRecordHandler(record));
+                    KafkaDataConsumerService.this.executor.submit(new KafkaRecordHandler(record));
                 }
             }
             kafkaConsumer.close();

@@ -39,9 +39,9 @@
 
   <dependencies>
     <dependency>
-        <groupId>io.taaja</groupId>
-        <artifactId>shared</artifactId>
-        <version>1.11</version>
+      <groupId>io.taaja</groupId>
+      <artifactId>shared</artifactId>
+      <version>1.13</version>
     </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>

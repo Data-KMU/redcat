@@ -4,7 +4,9 @@ import at.taaja.redcat.model.AbstractExtension;
 import at.taaja.redcat.model.Area;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.model.Filters;
+import com.mongodb.client.result.DeleteResult;
 import io.quarkus.runtime.StartupEvent;
+import lombok.SneakyThrows;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.mongojack.JacksonMongoCollection;
 
@@ -66,5 +68,9 @@ public class ZoneRepository{
 
     public void addExtension(Area area) {
         this.extensionCollection.insertOne(area);
+    }
+
+    public DeleteResult removeExtension(String extensionId) {
+        return this.extensionCollection.removeById(extensionId);
     }
 }
