@@ -1,9 +1,11 @@
 package at.taaja.redcat;
 
 
+import com.fasterxml.jackson.annotation.JsonView;
 import io.taaja.models.message.extension.operation.OperationType;
 import io.taaja.models.message.extension.operation.SpatialOperation;
 import io.taaja.models.record.spatial.SpatialEntity;
+import io.taaja.models.views.SpatialRecordView;
 
 import javax.inject.Inject;
 import javax.ws.rs.*;
@@ -22,29 +24,50 @@ public class ZoneResource {
     @GET
     @Path("/{id}")
     public SpatialEntity getExtension(@PathParam("id") String extensionId) {
-        return zoneRepository.getExtension(extensionId);
+        return zoneRepository.getSpatialEntity(extensionId);
     }
 
 
     @POST
     public SpatialOperation addExtension(SpatialEntity spatialEntity) {
-        this.zoneRepository.insertExtension(spatialEntity);
+        this.zoneRepository.insertSpatialEntity(spatialEntity);
         SpatialOperation spatialOperation = new SpatialOperation();
         spatialOperation.setOperationType(OperationType.Created);
         spatialOperation.setTargetId(spatialEntity.getId());
-        this.kafkaProducerService.publish(spatialOperation);
+
+        this.kafkaProducerService.publish(spatialOperation, spatialEntity);
+
         return spatialOperation;
     }
 
     @DELETE
     @Path("/{id}")
+    @JsonView({SpatialRecordView.Identity.class})
     public SpatialOperation removeExtension(@PathParam("id") String extensionId) {
-        this.zoneRepository.removeExtension(extensionId);
+        SpatialEntity spatialEntity = zoneRepository.getSpatialEntity(extensionId);
 
         SpatialOperation spatialOperation = new SpatialOperation();
         spatialOperation.setOperationType(OperationType.Removed);
         spatialOperation.setTargetId(extensionId);
-        this.kafkaProducerService.publish(spatialOperation);
+
+        this.kafkaProducerService.publish(spatialOperation, spatialEntity);
+
+        return spatialOperation;
+    }
+
+
+    @PATCH
+    @Path("/{id}")
+    @JsonView({SpatialRecordView.Identity.class})
+    public SpatialOperation updateExtension(@PathParam("id") String extensionId) {
+        SpatialEntity spatialEntity = zoneRepository.getSpatialEntity(extensionId);
+
+        SpatialOperation spatialOperation = new SpatialOperation();
+        spatialOperation.setOperationType(OperationType.Altered);
+        spatialOperation.setTargetId(extensionId);
+
+        //todo: implement update
+        this.kafkaProducerService.publish(spatialOperation, spatialEntity);
 
         return spatialOperation;
     }

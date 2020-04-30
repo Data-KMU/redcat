@@ -21,7 +21,8 @@ quarkus:
   mongodb:
     connection-string: mongodb://taaja-mongodb:27017
 
-
+purple-tiger:
+  url: "http://purpletiger:8093/v1/encode/affectedExtensions"
 
 "%dev":
   app:
@@ -31,6 +32,9 @@ quarkus:
     mongodb:
       connection-string: mongodb://localhost:27017
 
+  purple-tiger:
+    url: "http://localhost:8093/v1/encode/affectedExtensions"
+
 "%test":
   app:
     database: "test-taaja"
@@ -38,3 +42,6 @@ quarkus:
   quarkus:
     mongodb:
       connection-string: mongodb://localhost:27017
+
+  purple-tiger:
+    url: "http://localhost:8093/v1/encode/affectedExtensions"

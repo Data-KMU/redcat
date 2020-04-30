@@ -28,49 +28,49 @@ public class ZoneRepository{
     @ConfigProperty(name = "app.database")
     public String database;
 
-    private JacksonMongoCollection<SpatialEntity> extensionCollection;
+    private JacksonMongoCollection<SpatialEntity> spatialEntityCollection;
     private JacksonMongoCollection<Object> objectCollection;
 
     void onStart(@Observes StartupEvent ev) {
-        extensionCollection = JacksonMongoCollection
+        spatialEntityCollection = JacksonMongoCollection
                 .builder()
-                .build(this.mongoClient, this.database, "extension", SpatialEntity.class, UuidRepresentation.STANDARD);
+                .build(this.mongoClient, this.database, "spatialEntity", SpatialEntity.class, UuidRepresentation.STANDARD);
 
         objectCollection = JacksonMongoCollection
                 .builder()
-                .build(this.mongoClient, this.database, "extension", Object.class, UuidRepresentation.STANDARD);
+                .build(this.mongoClient, this.database, "spatialEntity", Object.class, UuidRepresentation.STANDARD);
     }
 
 
 
 
-    public SpatialEntity getExtension(String extensionId){
-        return this.extensionCollection.find(Filters.eq("_id", extensionId)).first();
+    public SpatialEntity getSpatialEntity(String spatialEntityId){
+        return this.spatialEntityCollection.find(Filters.eq("_id", spatialEntityId)).first();
     }
 
-    public Object getExtensionAsObject(String extensionId){
+    public Object getSpatialEntityAsObject(String spatialEntityId){
         return this.objectCollection
-                .find(Filters.eq("_id", extensionId)).first();
+                .find(Filters.eq("_id", spatialEntityId)).first();
     }
 
 
-    public void insertExtension(SpatialEntity abstractExtension) {
-        this.extensionCollection.insertOne(abstractExtension);
+    public void insertSpatialEntity(SpatialEntity abstractSpatialEntity) {
+        this.spatialEntityCollection.insertOne(abstractSpatialEntity);
     }
 
 
-    public void update(String extensionId, Object updatedExtension) {
+    public void update(String spatialEntityId, Object updatedSpatialEntity) {
         this.objectCollection.replaceOne(
-                Filters.eq("_id", extensionId),
-                updatedExtension
+                Filters.eq("_id", spatialEntityId),
+                updatedSpatialEntity
         );
     }
 
-    public void addExtension(Area area) {
-        this.extensionCollection.insertOne(area);
+    public void addSpatialEntity(Area area) {
+        this.spatialEntityCollection.insertOne(area);
     }
 
-    public DeleteResult removeExtension(String extensionId) {
-        return this.extensionCollection.removeById(extensionId);
+    public DeleteResult removeSpatialEntity(String spatialEntityId) {
+        return this.spatialEntityCollection.removeById(spatialEntityId);
     }
 }

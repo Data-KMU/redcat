@@ -76,14 +76,14 @@ public class KafkaDataConsumerService {
 
                 log.info("update extension " + id);
 
-                SpatialEntity extension = KafkaDataConsumerService.this.zoneRepository.getExtension(id);
+                SpatialEntity extension = KafkaDataConsumerService.this.zoneRepository.getSpatialEntity(id);
 
                 if(extension == null){
                     if("c56b3543-6853-4d86-a7bc-1cde673a5582".equals(id)){
                         //add new default area
                         Area area = new Area();
                         area.setId("c56b3543-6853-4d86-a7bc-1cde673a5582");
-                        KafkaDataConsumerService.this.zoneRepository.addExtension(area);
+                        KafkaDataConsumerService.this.zoneRepository.addSpatialEntity(area);
                     }else{
                         throw new NullPointerException("Extension cant be found. id: " + id);
                     }
@@ -93,13 +93,13 @@ public class KafkaDataConsumerService {
                 Object updatedExtension = updater.readValue(record.value());
 
                 //parse to validate
-                SpatialEntity abstractExtension = objectMapper.convertValue(updatedExtension, SpatialEntity.class);
+                SpatialEntity spatialEntity = objectMapper.convertValue(updatedExtension, SpatialEntity.class);
 
-                if(! id.equals(abstractExtension.getId())){
-                    throw new Exception("Id change is not allowed new id: " + abstractExtension.getId() + ", old id: " + id);
+                if(! id.equals(spatialEntity.getId())){
+                    throw new Exception("Id change is not allowed new id: " + spatialEntity.getId() + ", old id: " + id);
                 }
 
-                this.addOrCheckModify(abstractExtension);
+                this.addOrCheckModify(spatialEntity);
 
                 KafkaDataConsumerService.this.zoneRepository.update(id, updatedExtension);
 
@@ -108,23 +108,23 @@ public class KafkaDataConsumerService {
             }
         }
 
-        private void addOrCheckModify(SpatialEntity abstractExtension) {
+        private void addOrCheckModify(SpatialEntity spatialEntity) {
 
             //root level
             for (Object data : Lists.newArrayList(
-                    abstractExtension.getActuators(),
-                    abstractExtension.getSamplers(),
-                    abstractExtension.getSensors())
+                    spatialEntity.getActuators(),
+                    spatialEntity.getSamplers(),
+                    spatialEntity.getSensors())
             ){
                 try{
                     //Map: vehicleId, vehicleData
                     Map<String, Object> vehicleData = (Map)data;
 
                     //for Entries (id -> Data)
-                    for (Map.Entry<String, Object> entry : vehicleData.entrySet()){
+                    for (Object entry : vehicleData.values()){
 
                         //vehicle properties (data)
-                        Map<String, Object> dataEntry = (Map) entry.getValue();
+                        Map<String, Object> dataEntry = (Map) entry;
 
                         if(! dataEntry.containsKey(MODIFIED)){
                             dataEntry.put(MODIFIED, new Date());
