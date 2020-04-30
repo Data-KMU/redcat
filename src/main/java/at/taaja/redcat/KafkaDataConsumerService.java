@@ -1,13 +1,13 @@
 package at.taaja.redcat;
 
-import at.taaja.redcat.model.AbstractExtension;
-import at.taaja.redcat.model.Area;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.google.common.collect.Lists;
 import io.quarkus.runtime.ShutdownEvent;
 import io.quarkus.runtime.StartupEvent;
-import io.taaja.messaging.Topics;
+import io.taaja.kafka.Topics;
+import io.taaja.models.record.spatial.Area;
+import io.taaja.models.record.spatial.SpatialEntity;
 import lombok.extern.jbosslog.JBossLog;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -23,7 +23,10 @@ import javax.inject.Inject;
 import java.io.Closeable;
 import java.io.IOException;
 import java.time.Duration;
-import java.util.*;
+import java.util.Date;
+import java.util.Map;
+import java.util.Properties;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.regex.Pattern;
@@ -73,7 +76,7 @@ public class KafkaDataConsumerService {
 
                 log.info("update extension " + id);
 
-                AbstractExtension extension = KafkaDataConsumerService.this.zoneRepository.getExtension(id);
+                SpatialEntity extension = KafkaDataConsumerService.this.zoneRepository.getExtension(id);
 
                 if(extension == null){
                     if("c56b3543-6853-4d86-a7bc-1cde673a5582".equals(id)){
@@ -90,7 +93,7 @@ public class KafkaDataConsumerService {
                 Object updatedExtension = updater.readValue(record.value());
 
                 //parse to validate
-                AbstractExtension abstractExtension = objectMapper.convertValue(updatedExtension, AbstractExtension.class);
+                SpatialEntity abstractExtension = objectMapper.convertValue(updatedExtension, SpatialEntity.class);
 
                 if(! id.equals(abstractExtension.getId())){
                     throw new Exception("Id change is not allowed new id: " + abstractExtension.getId() + ", old id: " + id);
@@ -105,10 +108,7 @@ public class KafkaDataConsumerService {
             }
         }
 
-        private void addOrCheckModify(AbstractExtension abstractExtension) {
-
-            long now = System.currentTimeMillis();
-            long threshold = 5000; // 5sek
+        private void addOrCheckModify(SpatialEntity abstractExtension) {
 
             //root level
             for (Object data : Lists.newArrayList(

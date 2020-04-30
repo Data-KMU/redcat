@@ -177,12 +177,18 @@
         <SOURCES />
       </library>
     </orderEntry>
-    <orderEntry type="library" name="Maven: io.taaja:shared:1.13" level="project" />
+    <orderEntry type="library" name="Maven: io.taaja:shared:1.14" level="project" />
     <orderEntry type="library" name="Maven: com.fasterxml.jackson.core:jackson-core:2.9.10" level="project" />
     <orderEntry type="library" name="Maven: com.fasterxml.jackson.core:jackson-annotations:2.9.10" level="project" />
     <orderEntry type="library" name="Maven: commons-codec:commons-codec:1.13" level="project" />
     <orderEntry type="library" name="Maven: org.jboss.logging:jboss-logging:3.3.2.Final" level="project" />
     <orderEntry type="library" name="Maven: javax.inject:javax.inject:1" level="project" />
+    <orderEntry type="library" name="Maven: org.junit.jupiter:junit-jupiter-engine:5.5.2" level="project" />
+    <orderEntry type="library" name="Maven: org.apiguardian:apiguardian-api:1.1.0" level="project" />
+    <orderEntry type="library" name="Maven: org.junit.platform:junit-platform-engine:1.5.2" level="project" />
+    <orderEntry type="library" name="Maven: org.opentest4j:opentest4j:1.2.0" level="project" />
+    <orderEntry type="library" name="Maven: org.junit.platform:junit-platform-commons:1.5.2" level="project" />
+    <orderEntry type="library" name="Maven: org.junit.jupiter:junit-jupiter-api:5.5.2" level="project" />
     <orderEntry type="library" name="Maven: io.quarkus:quarkus-resteasy:1.1.1.Final" level="project" />
     <orderEntry type="library" name="Maven: io.quarkus:quarkus-vertx-http:1.1.1.Final" level="project" />
     <orderEntry type="library" name="Maven: io.quarkus.security:quarkus-security:1.0.1.Final" level="project" />
@@ -275,13 +281,7 @@
     <orderEntry type="library" scope="TEST" name="Maven: org.glassfish:jakarta.json:1.1.6" level="project" />
     <orderEntry type="library" scope="TEST" name="Maven: org.jboss:jandex:2.1.2.Final" level="project" />
     <orderEntry type="library" scope="TEST" name="Maven: org.junit.jupiter:junit-jupiter:5.5.2" level="project" />
-    <orderEntry type="library" scope="TEST" name="Maven: org.junit.jupiter:junit-jupiter-api:5.5.2" level="project" />
-    <orderEntry type="library" scope="TEST" name="Maven: org.apiguardian:apiguardian-api:1.1.0" level="project" />
-    <orderEntry type="library" scope="TEST" name="Maven: org.opentest4j:opentest4j:1.2.0" level="project" />
-    <orderEntry type="library" scope="TEST" name="Maven: org.junit.platform:junit-platform-commons:1.5.2" level="project" />
     <orderEntry type="library" scope="TEST" name="Maven: org.junit.jupiter:junit-jupiter-params:5.5.2" level="project" />
-    <orderEntry type="library" scope="TEST" name="Maven: org.junit.jupiter:junit-jupiter-engine:5.5.2" level="project" />
-    <orderEntry type="library" scope="TEST" name="Maven: org.junit.platform:junit-platform-engine:1.5.2" level="project" />
     <orderEntry type="library" name="Maven: io.quarkus:quarkus-core:1.1.1.Final" level="project" />
     <orderEntry type="library" name="Maven: io.smallrye.config:smallrye-config:1.5.1" level="project" />
     <orderEntry type="library" name="Maven: org.jboss.logmanager:jboss-logmanager-embedded:1.0.4" level="project" />
@@ -331,10 +331,10 @@
     <orderEntry type="library" name="Maven: org.mongodb:mongodb-driver-reactivestreams:1.11.0" level="project" />
     <orderEntry type="library" name="Maven: org.mongodb:mongodb-driver-async:3.10.0" level="project" />
     <orderEntry type="library" name="Maven: org.reactivestreams:reactive-streams:1.0.3" level="project" />
-    <orderEntry type="library" name="Maven: org.mongojack:mongojack:3.0.1" level="project" />
-    <orderEntry type="library" name="Maven: org.mongodb:mongodb-driver-sync:3.12.0" level="project" />
-    <orderEntry type="library" name="Maven: org.mongodb:bson:3.12.0" level="project" />
-    <orderEntry type="library" name="Maven: org.mongodb:mongodb-driver-core:3.12.0" level="project" />
+    <orderEntry type="library" name="Maven: org.mongojack:mongojack:4.0.0" level="project" />
+    <orderEntry type="library" name="Maven: org.mongodb:mongodb-driver-sync:4.0.2" level="project" />
+    <orderEntry type="library" name="Maven: org.mongodb:bson:4.0.2" level="project" />
+    <orderEntry type="library" name="Maven: org.mongodb:mongodb-driver-core:4.0.2" level="project" />
     <orderEntry type="library" name="Maven: com.fasterxml.jackson.core:jackson-databind:2.9.10.2" level="project" />
     <orderEntry type="library" name="Maven: com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.9.10" level="project" />
     <orderEntry type="library" name="Maven: javax.persistence:javax.persistence-api:2.2" level="project" />

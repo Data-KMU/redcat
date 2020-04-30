@@ -1,12 +1,12 @@
 package at.taaja.redcat;
 
-import at.taaja.redcat.model.AbstractExtension;
-import at.taaja.redcat.model.Area;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.result.DeleteResult;
 import io.quarkus.runtime.StartupEvent;
-import lombok.SneakyThrows;
+import io.taaja.models.record.spatial.Area;
+import io.taaja.models.record.spatial.SpatialEntity;
+import org.bson.UuidRepresentation;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.mongojack.JacksonMongoCollection;
 
@@ -28,23 +28,23 @@ public class ZoneRepository{
     @ConfigProperty(name = "app.database")
     public String database;
 
-    private JacksonMongoCollection<AbstractExtension> extensionCollection;
+    private JacksonMongoCollection<SpatialEntity> extensionCollection;
     private JacksonMongoCollection<Object> objectCollection;
 
     void onStart(@Observes StartupEvent ev) {
         extensionCollection = JacksonMongoCollection
                 .builder()
-                .build(this.mongoClient, this.database, "extension", AbstractExtension.class);
+                .build(this.mongoClient, this.database, "extension", SpatialEntity.class, UuidRepresentation.STANDARD);
 
         objectCollection = JacksonMongoCollection
                 .builder()
-                .build(this.mongoClient, this.database, "extension", Object.class);
+                .build(this.mongoClient, this.database, "extension", Object.class, UuidRepresentation.STANDARD);
     }
 
 
 
 
-    public AbstractExtension getExtension(String extensionId){
+    public SpatialEntity getExtension(String extensionId){
         return this.extensionCollection.find(Filters.eq("_id", extensionId)).first();
     }
 
@@ -54,7 +54,7 @@ public class ZoneRepository{
     }
 
 
-    public void insertExtension(AbstractExtension abstractExtension) {
+    public void insertExtension(SpatialEntity abstractExtension) {
         this.extensionCollection.insertOne(abstractExtension);
     }
 

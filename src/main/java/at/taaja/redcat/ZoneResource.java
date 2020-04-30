@@ -1,13 +1,13 @@
 package at.taaja.redcat;
 
-import at.taaja.redcat.model.AbstractExtension;
-import io.taaja.models.spatial.operation.OperationType;
-import io.taaja.models.spatial.operation.SpatialOperation;
+
+import io.taaja.models.message.extension.operation.OperationType;
+import io.taaja.models.message.extension.operation.SpatialOperation;
+import io.taaja.models.record.spatial.SpatialEntity;
 
 import javax.inject.Inject;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
 
 @Path("/v1/extension")
 @Produces(MediaType.APPLICATION_JSON)
@@ -21,17 +21,17 @@ public class ZoneResource {
 
     @GET
     @Path("/{id}")
-    public AbstractExtension getExtension(@PathParam("id") String extensionId) {
+    public SpatialEntity getExtension(@PathParam("id") String extensionId) {
         return zoneRepository.getExtension(extensionId);
     }
 
 
     @POST
-    public SpatialOperation addExtension(AbstractExtension abstractExtension) {
-        this.zoneRepository.insertExtension(abstractExtension);
+    public SpatialOperation addExtension(SpatialEntity spatialEntity) {
+        this.zoneRepository.insertExtension(spatialEntity);
         SpatialOperation spatialOperation = new SpatialOperation();
         spatialOperation.setOperationType(OperationType.Created);
-        spatialOperation.setTargetId(abstractExtension.getId());
+        spatialOperation.setTargetId(spatialEntity.getId());
         this.kafkaProducerService.publish(spatialOperation);
         return spatialOperation;
     }
@@ -66,7 +66,7 @@ public class ZoneResource {
 //        ObjectReader updater = objectMapper.readerForUpdating(extension);
 //        Object updatedExtension = updater.readValue(s);
 //
-//        AbstractExtension abstractExtension = objectMapper.convertValue(updatedExtension, AbstractExtension.class);
+//        SpatialEntity spatialEntity = objectMapper.convertValue(updatedExtension, SpatialEntity.class);
 //
 //        this.zoneRepository.update(id, updatedExtension);
 //
