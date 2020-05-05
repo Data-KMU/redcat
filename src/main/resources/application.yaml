@@ -22,7 +22,7 @@ quarkus:
     connection-string: mongodb://taaja-mongodb:27017
 
 purple-tiger:
-  url: "http://purpletiger:8093/v1/encode/affectedExtensions"
+  url: "http://purpletiger:8093/v1/calculate/intersectingExtensions"
 
 "%dev":
   app:
@@ -33,7 +33,7 @@ purple-tiger:
       connection-string: mongodb://localhost:27017
 
   purple-tiger:
-    url: "http://localhost:8093/v1/encode/affectedExtensions"
+    url: "http://localhost:8093/v1/calculate/intersectingExtensions"
 
 "%test":
   app:
@@ -44,4 +44,4 @@ purple-tiger:
       connection-string: mongodb://localhost:27017
 
   purple-tiger:
-    url: "http://localhost:8093/v1/encode/affectedExtensions"
+    url: "http://localhost:8093/v1/calculate/intersectingExtensions"

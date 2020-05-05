@@ -1,20 +1,22 @@
 package at.taaja.redcat;
 
+import com.fasterxml.jackson.annotation.JsonView;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.quarkus.runtime.ShutdownEvent;
 import io.quarkus.runtime.StartupEvent;
 import io.taaja.kafka.JacksonSerializer;
 import io.taaja.kafka.Topics;
 import io.taaja.models.generic.LocationInformation;
-import io.taaja.models.message.KafkaMessage;
 import io.taaja.models.message.extension.operation.SpatialOperation;
 import io.taaja.models.record.spatial.Area;
 import io.taaja.models.record.spatial.SpatialEntity;
+import io.taaja.models.views.SpatialRecordView;
 import lombok.extern.jbosslog.JBossLog;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.common.serialization.LongSerializer;
+import org.apache.kafka.common.serialization.StringSerializer;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import javax.enterprise.context.ApplicationScoped;
@@ -34,11 +36,15 @@ public class KafkaProducerService {
     @Inject
     IntersectingExtensionsService intersectingExtensionsService;
 
+    @Inject
+    IdTrackerService idTrackerService;
+
     @ConfigProperty(name = "kafka.bootstrap-servers")
     private String bootstrapServers;
 
-    private Producer<Long, SpatialOperation> kafkaProducer;
+    private Producer<String, SpatialOperation> kafkaProducer;
     private ExecutorService publishExecutor;
+    private ObjectMapper objectMapper;
 
 
     void onStart(@Observes StartupEvent ev) {
@@ -46,8 +52,8 @@ public class KafkaProducerService {
         producerProperties.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         producerProperties.put(ProducerConfig.CLIENT_ID_CONFIG, UUID.randomUUID().toString());
         this.publishExecutor = Executors.newCachedThreadPool();
-
-        this.kafkaProducer = new KafkaProducer(producerProperties, new LongSerializer(), new JacksonSerializer());
+        this.objectMapper = new ObjectMapper();
+        this.kafkaProducer = new KafkaProducer(producerProperties, new StringSerializer(), new JacksonSerializer());
     }
 
     void onStop(@Observes ShutdownEvent ev) throws IOException {
@@ -56,7 +62,16 @@ public class KafkaProducerService {
     }
 
 
+    @JsonView({SpatialRecordView.Identity.class})
+    public void publish(SpatialOperation spatialOperation, Object spatialEntity) {
+        this.publish(spatialOperation, this.objectMapper.convertValue(spatialEntity, SpatialEntity.class));
+    }
+
+    @JsonView({SpatialRecordView.Identity.class})
     public void publish(final SpatialOperation spatialOperation, final SpatialEntity spatialEntity) {
+
+        this.idTrackerService.addId(spatialEntity.getId());
+
         publishExecutor.submit(() -> {
             LocationInformation locationInformation;
 
@@ -83,9 +98,13 @@ public class KafkaProducerService {
             spatialOperation.setIntersectingExtensions(idList);
 
             for(String idsToUpdate : idList){
+
+                String messageUUID = UUID.randomUUID().toString();
+                this.idTrackerService.addId(messageUUID);
                 KafkaProducerService.this.kafkaProducer.send(
                     new ProducerRecord<>(
                         Topics.SPATIAL_EXTENSION_LIFE_DATA_TOPIC_PREFIX + idsToUpdate,
+                        messageUUID,
                         spatialOperation
                     )
                 );

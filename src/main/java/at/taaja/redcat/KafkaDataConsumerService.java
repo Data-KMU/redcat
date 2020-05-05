@@ -6,14 +6,13 @@ import com.google.common.collect.Lists;
 import io.quarkus.runtime.ShutdownEvent;
 import io.quarkus.runtime.StartupEvent;
 import io.taaja.kafka.Topics;
-import io.taaja.models.record.spatial.Area;
 import io.taaja.models.record.spatial.SpatialEntity;
+import lombok.Getter;
 import lombok.extern.jbosslog.JBossLog;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
-import org.apache.kafka.common.serialization.LongDeserializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
@@ -23,12 +22,11 @@ import javax.inject.Inject;
 import java.io.Closeable;
 import java.io.IOException;
 import java.time.Duration;
-import java.util.Date;
-import java.util.Map;
-import java.util.Properties;
-import java.util.UUID;
+import java.util.*;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.regex.Pattern;
 
 @ApplicationScoped
@@ -37,8 +35,12 @@ public class KafkaDataConsumerService {
 
     public static final String MODIFIED = "modified";
 
+
     @Inject
-    ZoneRepository zoneRepository;
+    IdTrackerService idTrackerService;
+
+    @Inject
+    ExtensionObjectRepository extensionObjectRepository;
 
     @ConfigProperty(name = "kafka.bootstrap-servers")
     private String bootstrapServers;
@@ -56,66 +58,77 @@ public class KafkaDataConsumerService {
     private String groupId;
 
     private ExtensionLivDataConsumer livDataConsumer;
-    private ExecutorService executor;
+    private ExecutorService taskExecutor;
 
     private ObjectMapper objectMapper;
 
-    private class KafkaRecordHandler implements Runnable {
+    @Getter
+    private class DataMergeTask implements Callable<Object> {
 
-        private final ConsumerRecord<Long, String> record;
+        private final String value;
+        private final String id;
+        private String messageKey = null;
 
-        public KafkaRecordHandler(ConsumerRecord<Long, String> record) {
-            this.record = record;
+        public DataMergeTask(ConsumerRecord<String, String> record) {
+            this.value = record.value();
+            this.id = getIdFromTopic(record.topic());
+            this.messageKey = record.key();
+        }
+
+        public DataMergeTask(String id, String value){
+            this.value = value;
+            this.id = id;
         }
 
         @Override
-        public void run() {
+        public Object call() throws Exception {
+            log.info("update extension " + id);
 
-            try {
-                String id = this.getIdFromTopic(record.topic());
+            Object extension = KafkaDataConsumerService.this.extensionObjectRepository.findByIdOrException(id);
 
-                log.info("update extension " + id);
+            //fix
+            int coordinatesCount =  ((List)((Map)extension).get("coordinates")).size();
 
-                SpatialEntity extension = KafkaDataConsumerService.this.zoneRepository.getSpatialEntity(id);
+            ObjectReader updater = objectMapper.readerForUpdating(extension);
+            Object updatedExtension = updater.readValue(value);
 
-                if(extension == null){
-                    if("c56b3543-6853-4d86-a7bc-1cde673a5582".equals(id)){
-                        //add new default area
-                        Area area = new Area();
-                        area.setId("c56b3543-6853-4d86-a7bc-1cde673a5582");
-                        KafkaDataConsumerService.this.zoneRepository.addSpatialEntity(area);
-                    }else{
-                        throw new NullPointerException("Extension cant be found. id: " + id);
-                    }
-                }
+            this.updateCoordinates(coordinatesCount, updatedExtension);
 
-                ObjectReader updater = objectMapper.readerForUpdating(extension);
-                Object updatedExtension = updater.readValue(record.value());
+            this.addOrCheckModify(updatedExtension);
 
-                //parse to validate
-                SpatialEntity spatialEntity = objectMapper.convertValue(updatedExtension, SpatialEntity.class);
+            //parse to validate
+            SpatialEntity spatialEntity = objectMapper.convertValue(updatedExtension, SpatialEntity.class);
 
-                if(! id.equals(spatialEntity.getId())){
-                    throw new Exception("Id change is not allowed new id: " + spatialEntity.getId() + ", old id: " + id);
-                }
-
-                this.addOrCheckModify(spatialEntity);
-
-                KafkaDataConsumerService.this.zoneRepository.update(id, updatedExtension);
-
-            } catch (Exception e) {
-                log.error("cant parse object: " + e.getMessage(), e);
+            if(! id.equals(spatialEntity.getId())){
+                throw new Exception("Id change is not allowed new id: " + spatialEntity.getId() + ", old id: " + id);
             }
+
+            KafkaDataConsumerService.this.extensionObjectRepository.update(id, updatedExtension);
+
+            return updatedExtension;
         }
 
-        private void addOrCheckModify(SpatialEntity spatialEntity) {
+        private void updateCoordinates(int coordinatesCount, Object updatedExtension) {
+            Map<String, Object> updatedExtensionMap = (Map)updatedExtension;
+
+            List co1 = (List)updatedExtensionMap.get("coordinates");
+
+            if(co1.size() != coordinatesCount){
+                co1.remove(0);
+            }
+
+        }
+
+        private void addOrCheckModify(Object rawSpatialEntity) {
+
+            Map<String, Object> root = (Map)rawSpatialEntity;
 
             //root level
             for (Object data : Lists.newArrayList(
-                    spatialEntity.getActuators(),
-                    spatialEntity.getSamplers(),
-                    spatialEntity.getSensors())
-            ){
+                    root.get("actuators"),
+                    root.get("sensors"),
+                    root.get("samplers")
+            )){
                 try{
                     //Map: vehicleId, vehicleData
                     Map<String, Object> vehicleData = (Map)data;
@@ -131,12 +144,12 @@ public class KafkaDataConsumerService {
                         }
                     }
                 }catch (Exception e){
-                    log.error("cant update modified " + e.getMessage(), e);
+                    log.info("cant update modified " + e.getMessage(), e);
                 }
             }
         }
 
-        private String getIdFromTopic(String topic){
+        private final String getIdFromTopic(String topic){
             return topic.substring(Topics.SPATIAL_EXTENSION_LIFE_DATA_TOPIC_PREFIX.length());
         }
 
@@ -159,12 +172,16 @@ public class KafkaDataConsumerService {
 
         @Override
         public void run() {
-            KafkaConsumer kafkaConsumer = new KafkaConsumer(this.consumerProperties, new LongDeserializer(), new StringDeserializer());
+            KafkaConsumer kafkaConsumer = new KafkaConsumer(this.consumerProperties, new StringDeserializer(), new StringDeserializer());
             kafkaConsumer.subscribe(Pattern.compile(Topics.SPATIAL_EXTENSION_LIFE_DATA_TOPIC_PREFIX + ".*"));
             while (this.running){
-                ConsumerRecords<Long, String> records = kafkaConsumer.poll(Duration.ofMillis(100));
-                for(ConsumerRecord<Long, String> record : records){
-                    KafkaDataConsumerService.this.executor.submit(new KafkaRecordHandler(record));
+                ConsumerRecords<String, String> records = kafkaConsumer.poll(Duration.ofMillis(100));
+                for(ConsumerRecord<String, String> record : records){
+
+                    if(!KafkaDataConsumerService.this.idTrackerService.containsId(record.key())){
+                        KafkaDataConsumerService.this.taskExecutor.submit(new DataMergeTask(record));
+                    }
+
                 }
             }
             kafkaConsumer.close();
@@ -179,14 +196,18 @@ public class KafkaDataConsumerService {
 
     void onStart(@Observes StartupEvent ev) {
         this.objectMapper = new ObjectMapper();
-        this.executor = Executors.newCachedThreadPool();
+        this.taskExecutor = Executors.newCachedThreadPool();
         this.livDataConsumer = new ExtensionLivDataConsumer();
         this.livDataConsumer.start();
     }
 
     void onStop(@Observes ShutdownEvent ev) throws IOException {
         this.livDataConsumer.close();
-        this.executor.shutdown();
+        this.taskExecutor.shutdown();
+    }
+
+    public Future<Object> processUpdate(String extensionId, String rawJson){
+         return this.taskExecutor.submit(new DataMergeTask(extensionId, rawJson));
     }
 
 }
