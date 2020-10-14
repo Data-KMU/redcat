@@ -47,9 +47,7 @@ public class TestResource {
         corridor.setPriority(ExtensionPriority.VERY_HIGH_PRIORITY);
 
 
-        List<List<Waypoint>> wpl = new ArrayList<>();
         List<Waypoint> waypoints = new ArrayList<>();
-        wpl.add(waypoints);
 
         Waypoint waypoint = new Waypoint();
         waypoint.setAltitude(1000f);
@@ -58,7 +56,7 @@ public class TestResource {
         waypoint.setAdditionalData("additional data");
         waypoints.add(waypoint);
 
-        corridor.setCoordinates(wpl);
+        corridor.setCoordinates(waypoints);
         corridor.setActuators(actuators);
 
         Area area = new Area();

@@ -7,6 +7,7 @@ import io.quarkus.runtime.StartupEvent;
 import io.taaja.kafka.JacksonSerializer;
 import io.taaja.kafka.Topics;
 import io.taaja.models.generic.LocationInformation;
+import io.taaja.models.message.KafkaMessage;
 import io.taaja.models.message.extension.operation.SpatialOperation;
 import io.taaja.models.record.spatial.Area;
 import io.taaja.models.record.spatial.SpatialEntity;
@@ -42,7 +43,7 @@ public class KafkaProducerService {
     @ConfigProperty(name = "kafka.bootstrap-servers")
     private String bootstrapServers;
 
-    private Producer<String, SpatialOperation> kafkaProducer;
+    private Producer<String, KafkaMessage> kafkaProducer;
     private ExecutorService publishExecutor;
     private ObjectMapper objectMapper;
 
@@ -59,6 +60,13 @@ public class KafkaProducerService {
     void onStop(@Observes ShutdownEvent ev) throws IOException {
         log.info("shutdown kafka");
         this.kafkaProducer.close();
+    }
+
+
+    public void publish(String extensionId, KafkaMessage kafkaMessage){
+        this.kafkaProducer.send(
+                new ProducerRecord<>(Topics.SPATIAL_EXTENSION_LIFE_DATA_TOPIC_PREFIX + extensionId, kafkaMessage)
+        );
     }
 
 

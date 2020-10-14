@@ -177,12 +177,11 @@
         <SOURCES />
       </library>
     </orderEntry>
-    <orderEntry type="library" name="Maven: io.taaja:shared:1.19" level="project" />
     <orderEntry type="library" name="Maven: org.mongojack:mongojack:4.0.0" level="project" />
     <orderEntry type="library" name="Maven: org.projectlombok:lombok:1.18.12" level="project" />
     <orderEntry type="library" name="Maven: org.apache.httpcomponents:httpclient:4.5.12" level="project" />
     <orderEntry type="library" name="Maven: org.apache.kafka:kafka-clients:2.5.0" level="project" />
-    <orderEntry type="library" name="Maven: io.taaja:shared:1.19" level="project" />
+    <orderEntry type="library" name="Maven: io.taaja:shared:1.20" level="project" />
     <orderEntry type="library" name="Maven: com.fasterxml.jackson.core:jackson-core:2.10.3" level="project" />
     <orderEntry type="library" name="Maven: com.fasterxml.jackson.core:jackson-annotations:2.10.3" level="project" />
     <orderEntry type="library" name="Maven: commons-codec:commons-codec:1.13" level="project" />
