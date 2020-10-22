@@ -1,0 +1,101 @@
+package at.taaja.redcat.services;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.quarkus.runtime.ShutdownEvent;
+import io.quarkus.runtime.StartupEvent;
+import io.taaja.kafka.JacksonSerializer;
+import io.taaja.kafka.Topics;
+import io.taaja.models.message.KafkaMessage;
+import io.taaja.models.record.spatial.SpatialEntity;
+import lombok.extern.jbosslog.JBossLog;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.Producer;
+import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.serialization.StringSerializer;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
+
+import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.event.Observes;
+import java.io.IOException;
+import java.util.Properties;
+import java.util.UUID;
+
+@ApplicationScoped
+@JBossLog
+public class KafkaProducerService {
+
+    @ConfigProperty(name = "kafka.bootstrap-servers")
+    private String bootstrapServers;
+
+    private Producer<String, KafkaMessage> kafkaProducer;
+    private ObjectMapper objectMapper;
+
+    public static String originatorId;
+
+
+    void onStart(@Observes StartupEvent ev) {
+        if(KafkaProducerService.originatorId == null){
+            KafkaProducerService.originatorId = UUID.randomUUID().toString();
+        }
+        Properties producerProperties = new Properties();
+        producerProperties.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        producerProperties.put(ProducerConfig.CLIENT_ID_CONFIG, this.originatorId);
+        this.objectMapper = new ObjectMapper();
+        this.kafkaProducer = new KafkaProducer(producerProperties, new StringSerializer(), new JacksonSerializer());
+    }
+
+    void onStop(@Observes ShutdownEvent ev) throws IOException {
+        log.info("shutdown kafka");
+        this.kafkaProducer.close();
+    }
+
+    public void publish(KafkaMessage kafkaMessage, Iterable<SpatialEntity> targets){
+
+        kafkaMessage.setOriginatorId(this.originatorId);
+
+        for(SpatialEntity targetEntity : targets) {
+
+            KafkaProducerService.this.kafkaProducer.send(
+                    new ProducerRecord<>(
+                            Topics.SPATIAL_EXTENSION_LIFE_DATA_TOPIC_PREFIX + targetEntity.getId(),
+                            KafkaProducerService.originatorId + "/" + UUID.randomUUID().toString(),
+                            kafkaMessage
+                    )
+            );
+        }
+
+    }
+
+
+
+
+//    @JsonView({SpatialRecordView.Identity.class})
+//    public void publish(SpatialOperation spatialOperation, Object spatialEntity) {
+//        this.publish(spatialOperation, this.objectMapper.convertValue(spatialEntity, SpatialEntity.class));
+//    }
+//
+//    @JsonView({SpatialRecordView.Identity.class})
+//    public void publish(final SpatialOperation spatialOperation, final SpatialEntity spatialEntity) {
+//
+//            ArrayList<String> idList = new ArrayList<>();
+//            for(SpatialEntity spatialEntityFromInfo : locationInformation.getSpatialEntities()){
+//                idList.add(spatialEntityFromInfo.getId());
+//            }
+//            spatialOperation.setIntersectingExtensions(idList);
+//
+//            for(String idsToUpdate : idList){
+//
+//                String messageUUID = UUID.randomUUID().toString();
+////                this.idTrackerService.addId(messageUUID);
+//                KafkaProducerService.this.kafkaProducer.send(
+//                    new ProducerRecord<>(
+//                        Topics.SPATIAL_EXTENSION_LIFE_DATA_TOPIC_PREFIX + idsToUpdate,
+//                        messageUUID,
+//                        spatialOperation
+//                    )
+//                );
+//            }
+//        });
+//    }
+}

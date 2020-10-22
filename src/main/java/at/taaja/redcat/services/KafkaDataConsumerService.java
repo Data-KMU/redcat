@@ -1,6 +1,5 @@
-package at.taaja.redcat;
+package at.taaja.redcat.services;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.quarkus.runtime.ShutdownEvent;
 import io.quarkus.runtime.StartupEvent;
 import io.taaja.kafka.Topics;
@@ -18,23 +17,16 @@ import javax.inject.Inject;
 import java.io.Closeable;
 import java.io.IOException;
 import java.time.Duration;
-import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.Properties;
+import java.util.UUID;
 import java.util.regex.Pattern;
 
 @ApplicationScoped
 @JBossLog
 public class KafkaDataConsumerService {
 
-    public static final String MODIFIED = "modified";
-
     @Inject
-    IdTrackerService idTrackerService;
-
-    @Inject
-    DataMergeService dataMergeService;
+    DataValidationAndMergeService dataValidationAndMergeService;
 
     @ConfigProperty(name = "kafka.bootstrap-servers")
     private String bootstrapServers;
@@ -77,8 +69,9 @@ public class KafkaDataConsumerService {
                 ConsumerRecords<String, String> records = kafkaConsumer.poll(Duration.ofMillis(100));
                 for(ConsumerRecord<String, String> record : records){
 
-                    if(!KafkaDataConsumerService.this.idTrackerService.containsId(record.key())){
-                        KafkaDataConsumerService.this.dataMergeService.processUpdate(record);
+
+                    if(!record.key().startsWith(KafkaProducerService.originatorId)){
+                        KafkaDataConsumerService.this.dataValidationAndMergeService.processUpdate(record);
                     }
 
                 }

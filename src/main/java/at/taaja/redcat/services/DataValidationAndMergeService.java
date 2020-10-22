@@ -1,5 +1,7 @@
-package at.taaja.redcat;
+package at.taaja.redcat.services;
 
+import at.taaja.redcat.repositories.ExtensionObjectRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.google.common.collect.Lists;
@@ -11,12 +13,15 @@ import lombok.Getter;
 import lombok.extern.jbosslog.JBossLog;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 
+import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.event.Observes;
 import javax.inject.Inject;
+import javax.ws.rs.BadRequestException;
 import java.io.IOException;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -24,7 +29,8 @@ import java.util.concurrent.Future;
 
 
 @JBossLog
-public class DataMergeService  {
+@ApplicationScoped
+public class DataValidationAndMergeService {
 
     public static final String MODIFIED = "modified";
 
@@ -43,6 +49,22 @@ public class DataMergeService  {
         this.taskExecutor.shutdown();
     }
 
+
+
+    public SpatialEntity checkSpatialEntityForPost(String raw) {
+        try {
+            SpatialEntity spatialEntity = this.objectMapper.readValue(raw, SpatialEntity.class);
+            spatialEntity.setId(UUID.randomUUID().toString());
+            return spatialEntity;
+        } catch (JsonProcessingException e) {
+            //do nothing
+        }
+        throw new BadRequestException("cant parse into SpatialEntity");
+    }
+
+
+
+
     public Future<Object> processUpdate(String extensionId, String rawJSON) {
         return this.taskExecutor.submit(new MergeTask(extensionId, rawJSON));
     }
@@ -59,6 +81,8 @@ public class DataMergeService  {
     private final String getIdFromTopic(String topic){
         return topic.substring(Topics.SPATIAL_EXTENSION_LIFE_DATA_TOPIC_PREFIX.length());
     }
+
+
 
     @Getter
     private class MergeTask implements Callable<Object>{

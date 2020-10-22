@@ -41,7 +41,7 @@
     <dependency>
       <groupId>io.taaja</groupId>
       <artifactId>shared</artifactId>
-      <version>1.20</version>
+      <version>1.22</version>
     </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>
@@ -99,6 +99,10 @@
 <!--      <version>4.4</version>-->
     </dependency>
 
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-resteasy-mutiny</artifactId>
+    </dependency>
 
     <dependency>
       <groupId>io.quarkus</groupId>

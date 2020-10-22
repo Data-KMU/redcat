@@ -1,4 +1,4 @@
-package at.taaja.redcat;
+package at.taaja.redcat.repositories;
 
 import io.taaja.AbstractRepository;
 

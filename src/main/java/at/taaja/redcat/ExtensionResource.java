@@ -1,33 +1,38 @@
 package at.taaja.redcat;
 
 
+import at.taaja.redcat.repositories.ExtensionObjectRepository;
+import at.taaja.redcat.services.DataValidationAndMergeService;
+import at.taaja.redcat.services.IntersectingExtensionsService;
+import at.taaja.redcat.services.KafkaProducerService;
 import com.fasterxml.jackson.annotation.JsonView;
+import io.smallrye.mutiny.Uni;
+import io.taaja.models.message.data.update.SpatialDataUpdate;
 import io.taaja.models.message.extension.operation.OperationType;
 import io.taaja.models.message.extension.operation.SpatialOperation;
-import io.taaja.models.record.spatial.SpatialEntity;
 import io.taaja.models.views.SpatialRecordView;
 import lombok.SneakyThrows;
 
 import javax.inject.Inject;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
-import java.util.UUID;
 
 @Path("/v1/extension")
 @Produces(MediaType.APPLICATION_JSON)
 public class ExtensionResource {
 
-    @Inject
-    ExtensionRepository extensionRepository;
 
     @Inject
     ExtensionObjectRepository extensionObjectRepository;
 
     @Inject
-    KafkaProducerService kafkaProducerService;
+    DataValidationAndMergeService dataValidationAndMergeService;
 
     @Inject
-    DataMergeService dataMergeService;
+    IntersectingExtensionsService intersectingExtensionsService;
+
+    @Inject
+    KafkaProducerService kafkaProducerService;
 
     /**
      * @param extensionId
@@ -35,31 +40,42 @@ public class ExtensionResource {
      */
     @GET
     @Path("/{id}")
-    public Object getExtension(@PathParam("id") String extensionId) {
-        return extensionObjectRepository.findByIdOrException(extensionId);
+    public Uni<Object> getExtension(@PathParam("id") String extensionId) {
+            return Uni.createFrom().item(extensionId).onItem().apply(id -> extensionObjectRepository.findByIdOrException(id));
     }
+
 
     /**
      * Creates a Spatial Entity
-     * @param spatialEntity
+     * @param rawBody
      * @return a Spatial Operation with "created" as operation type
      */
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
-    public SpatialOperation addExtension(SpatialEntity spatialEntity) {
+    public Uni<SpatialOperation> addExtension(String rawBody) {
 
-        //set a UUID
-        spatialEntity.setId(UUID.randomUUID().toString());
+        return Uni.createFrom().item(rawBody)
 
-        this.extensionRepository.insertOne(spatialEntity);
+                //check input
+                .onItem().apply(s -> this.dataValidationAndMergeService.checkSpatialEntityForPost(s))
 
-        SpatialOperation spatialOperation = new SpatialOperation();
-        spatialOperation.setOperationType(OperationType.Created);
-        spatialOperation.setTargetId(spatialEntity.getId());
+                //persist and retrieve intersecting entities
+                .onItem().apply(spatialEntity -> {
+                    extensionObjectRepository.insertOne(spatialEntity);
+                    return this.intersectingExtensionsService.calculate(spatialEntity);
+                })
 
-        this.kafkaProducerService.publish(spatialOperation, spatialEntity);
+                //publish
+                .onItem().apply(locationInformation -> {
+                    SpatialOperation spatialOperation = new SpatialOperation();
+                    spatialOperation.setOperationType(OperationType.Created);
+                    spatialOperation.setTargetId(locationInformation.getOriginator().getId());
 
-        return spatialOperation;
+                    this.kafkaProducerService.publish(spatialOperation, locationInformation.getSpatialEntities());
+
+                    return spatialOperation;
+                });
+
     }
 
     /**
@@ -73,40 +89,47 @@ public class ExtensionResource {
     @Path("/{id}")
     @JsonView({SpatialRecordView.Identity.class})
     public SpatialOperation removeExtension(@PathParam("id") String extensionId) {
-        SpatialEntity spatialEntity = extensionRepository.deleteOneByIdAndGet(extensionId);
-
-        if(spatialEntity == null){
-            throw new NotFoundException("Entity not found");
-        }
-
-        SpatialOperation spatialOperation = new SpatialOperation();
-        spatialOperation.setOperationType(OperationType.Removed);
-        spatialOperation.setTargetId(extensionId);
-
-        this.kafkaProducerService.publish(spatialOperation, spatialEntity);
-
-        return spatialOperation;
+//        SpatialEntity spatialEntity = extensionRepository.deleteOneByIdAndGet(extensionId);
+//
+//        if(spatialEntity == null){
+//            throw new NotFoundException("Entity not found");
+//        }
+//
+//        SpatialOperation spatialOperation = new SpatialOperation();
+//        spatialOperation.setOperationType(OperationType.Removed);
+//        spatialOperation.setTargetId(extensionId);
+//
+//        this.kafkaProducerService.publish(spatialOperation, spatialEntity);
+//
+//        return spatialOperation;
+        return null;
     }
 
 
-//    @PATCH
-//    @Path("/{id}")
-//    @SneakyThrows
-//    @Consumes(MediaType.APPLICATION_JSON)
-//    public SpatialDataUpdate updateVehicleDate(@PathParam("id") String extensionId, @PathParam("id") String entityId, String rawJSON){
-//
+    /**
+     * Updates the meta info of a SpatialEntity
+     *
+     * @param extensionId
+     * @param rawJSON
+     * @return
+     */
+    @PUT
+    @Path("/{id}")
+    @SneakyThrows
+    @JsonView({SpatialRecordView.Identity.class})
+    @Consumes(MediaType.APPLICATION_JSON)
+    public SpatialDataUpdate updateMetaData(@PathParam("id") String extensionId, @PathParam("id") String entityId, String rawBody){
+
 //        Object updatedSpatialEntity = this.kafkaDataConsumerService.processUpdate(new DataMergeService(extensionId, entityId, rawJSON)).get();
 //
 //        SpatialDataUpdate spatialDataUpdate = new SpatialDataUpdate();
-//
-//
-//        return null;
-//    }
+
+
+        return null;
+    }
 
     /**
-     * Updates a SpatialEntity
-     * It does not matter if there is an update on the Entity itself or of one of its entity it always returns a Spatial Operation
-     * EXCEPT when there is no entity with the specified id.
+     * Updates a SpatialEntity with new traffic data
      *
      * @param extensionId
      * @param rawJSON
@@ -117,17 +140,20 @@ public class ExtensionResource {
     @SneakyThrows
     @JsonView({SpatialRecordView.Identity.class})
     @Consumes(MediaType.APPLICATION_JSON)
-    public SpatialOperation updateExtension(@PathParam("id") String extensionId, String rawJSON) {
+    public SpatialOperation updateExtension(@PathParam("id") String extensionId, String rawBody) {
 
-        Object updatedSpatialEntity = this.dataMergeService.processUpdate(extensionId, rawJSON).get();
+//        Object updatedSpatialEntity = this.dataValidationAndMergeService.processUpdate(extensionId, rawJSON).get();
+//
+//        SpatialOperation spatialOperation = new SpatialOperation();
+//        spatialOperation.setOperationType(OperationType.Altered);
+//        spatialOperation.setTargetId(extensionId);
+//
+//        this.kafkaProducerService.publish(spatialOperation, updatedSpatialEntity);
+//
+//        return spatialOperation;
 
-        SpatialOperation spatialOperation = new SpatialOperation();
-        spatialOperation.setOperationType(OperationType.Altered);
-        spatialOperation.setTargetId(extensionId);
 
-        this.kafkaProducerService.publish(spatialOperation, updatedSpatialEntity);
-
-        return spatialOperation;
+        return null;
     }
 
 
