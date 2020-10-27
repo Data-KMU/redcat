@@ -1,13 +1,15 @@
 package at.taaja.redcat.services;
 
-import at.taaja.redcat.repositories.ExtensionObjectRepository;
+import at.taaja.redcat.repositories.ExtensionAsObjectRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
+import com.fasterxml.jackson.databind.exc.MismatchedInputException;
 import com.google.common.collect.Lists;
 import io.quarkus.runtime.ShutdownEvent;
 import io.quarkus.runtime.StartupEvent;
 import io.taaja.kafka.Topics;
+import io.taaja.models.message.data.update.SpatialDataUpdate;
 import io.taaja.models.record.spatial.SpatialEntity;
 import lombok.Getter;
 import lombok.extern.jbosslog.JBossLog;
@@ -18,10 +20,7 @@ import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 import javax.ws.rs.BadRequestException;
 import java.io.IOException;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -34,11 +33,13 @@ public class DataValidationAndMergeService {
 
     public static final String MODIFIED = "modified";
 
+    public static final List<String> DATA_PROPERTIES =   Arrays.asList("actuators", "sensors", "samplers");
+
     private ObjectMapper objectMapper;
     private ExecutorService taskExecutor;
 
     @Inject
-    ExtensionObjectRepository extensionObjectRepository;
+    ExtensionAsObjectRepository extensionAsObjectRepository;
 
     void onStart(@Observes StartupEvent ev) {
         this.objectMapper = new ObjectMapper();
@@ -50,19 +51,25 @@ public class DataValidationAndMergeService {
     }
 
 
-
-    public SpatialEntity checkSpatialEntityForPost(String raw) {
-        try {
-            SpatialEntity spatialEntity = this.objectMapper.readValue(raw, SpatialEntity.class);
-            spatialEntity.setId(UUID.randomUUID().toString());
-            return spatialEntity;
-        } catch (JsonProcessingException e) {
-            //do nothing
-        }
-        throw new BadRequestException("cant parse into SpatialEntity");
+    public <T> T checkRawInputAndStructure(String raw, String entityId, Class<T> valueType) {
+        LinkedHashMap<String, Object> hm = this.checkRawInput(raw, entityId);
+        return  this.objectMapper.convertValue(hm, valueType);
     }
 
-
+    public LinkedHashMap<String, Object> checkRawInput(String raw, String entityId) {
+        try {
+            LinkedHashMap<String, Object> input = this.objectMapper.readValue(raw, LinkedHashMap.class);
+            if(entityId != null && input.containsKey("_id") && ! entityId.equals(input.get("_id"))){
+                throw new BadRequestException("key altering is not allowed");
+            }
+            return input;
+        } catch (MismatchedInputException mie){
+            throw new BadRequestException("cant process json array");
+        } catch (JsonProcessingException jpe) {
+            throw new BadRequestException("cant read json");
+            //do nothing
+        }
+    }
 
 
     public Future<Object> processUpdate(String extensionId, String rawJSON) {
@@ -82,6 +89,108 @@ public class DataValidationAndMergeService {
         return topic.substring(Topics.SPATIAL_EXTENSION_LIFE_DATA_TOPIC_PREFIX.length());
     }
 
+    public SpatialEntity processMetaUpdate(String entityId, LinkedHashMap<String, Object> parsedJson) {
+
+        LinkedHashMap<String, Object> original = (LinkedHashMap) this.extensionAsObjectRepository.findByIdOrException(entityId);
+
+        Set<String> propertiesToProcess = parsedJson.keySet();
+        propertiesToProcess.removeAll(DATA_PROPERTIES);
+        propertiesToProcess.remove("_id");
+
+        this.deepMerge(original, parsedJson,propertiesToProcess);
+
+        return null;
+    }
+
+    public SpatialDataUpdate processDataUpdate(String entityId, LinkedHashMap<String, Object> parsedJson) {
+
+        LinkedHashMap<String, Object> original = (LinkedHashMap) this.extensionAsObjectRepository.findByIdOrException(entityId);
+
+        this.deepMerge(original, parsedJson, DATA_PROPERTIES);
+
+        return null;
+    }
+
+    private void deepMerge(final Map<String, Object> original, final Map<String, Object> newData, Iterable<String> keysToProcess){
+
+        keysToProcess.forEach(key -> {
+
+            //new data key exists / no key in old
+            if(newData.containsKey(key)) {
+                if (original.containsKey(key)) {
+                    //merge
+
+                    Object originalValue = original.get(key);
+                    Object newValue = newData.get(key);
+
+                    //delete if null
+                    if(newValue == null){
+                        original.remove(key);
+                    }
+
+                    if(newValue instanceof List && originalValue instanceof List){
+                        // merge Array
+                        List<Object> newValueList = (List) newValue;
+                        List<Object> originalValueList = (List) originalValue;
+
+                        deepMerge(originalValueList, newValueList);
+
+                    } else if(newValue instanceof Map && originalValue instanceof Map){
+                        // merge Map
+                        Map<String, Object> newValueMap = (Map) newValue;
+                        Map<String, Object> originalValueMap = (Map) originalValue;
+
+                        deepMerge(originalValueMap, newValueMap, newValueMap.keySet());
+                    }else {
+                        //overwrite simple
+                        original.put(key, newData.get(key));
+                    }
+
+                } else {
+                    //add
+
+                    Object insert = newData.get(key);
+                    if(insert != null){
+                        original.put(key, insert);
+                    }
+                }
+            }
+
+        });
+
+    }
+
+    private void deepMerge(final List<Object> original, final List<Object> newData){
+
+        for (int i = 0; i < newData.size(); i++){
+            Object currentNewListObject = newData.get(i);
+
+            if(i == original.size()){
+                original.add(currentNewListObject);
+                continue;
+            }
+
+            Object currentOriginalListObject = original.get(i);
+
+            if(currentNewListObject instanceof Map && currentOriginalListObject instanceof Map){
+                Map<String, Object> newValueMap = (Map) currentNewListObject;
+                Map<String, Object> originalValueMap = (Map) currentOriginalListObject;
+
+                deepMerge(newValueMap, originalValueMap, newValueMap.keySet());
+            }else if(currentNewListObject instanceof List && currentOriginalListObject instanceof List){
+                List<Object> newValueList = (List) currentNewListObject;
+                List<Object> originalValueList = (List) currentOriginalListObject;
+
+                deepMerge(newValueList, originalValueList);
+            }else {
+                original.set(i, currentNewListObject);
+            }
+
+
+        }
+
+
+    }
 
 
     @Getter
@@ -99,7 +208,7 @@ public class DataValidationAndMergeService {
         public Object call() throws Exception {
             log.info("update extension " + id);
 
-            Object extension = extensionObjectRepository.findByIdOrException(id);
+            Object extension = extensionAsObjectRepository.findByIdOrException(id);
 
             //check if objekt has changed in meta
 
@@ -125,7 +234,7 @@ public class DataValidationAndMergeService {
                 throw new Exception("Id change is not allowed new id: " + spatialEntity.getId() + ", old id: " + id);
             }
 
-            extensionObjectRepository.update(id, updatedExtension);
+            extensionAsObjectRepository.update(id, updatedExtension);
 
             return updatedExtension;
         }

@@ -50,20 +50,21 @@ public class KafkaProducerService {
         this.kafkaProducer.close();
     }
 
-    public void publish(KafkaMessage kafkaMessage, Iterable<SpatialEntity> targets){
+    public void publish(final KafkaMessage kafkaMessage, final Iterable<SpatialEntity> targets){
+        targets.forEach(spatialEntity -> this.publish(kafkaMessage, spatialEntity.getId()));
+    }
 
-        kafkaMessage.setOriginatorId(this.originatorId);
+    public void publish(final KafkaMessage kafkaMessage, final String targetId){
 
-        for(SpatialEntity targetEntity : targets) {
+        kafkaMessage.setPublisherId(this.originatorId);
 
-            KafkaProducerService.this.kafkaProducer.send(
-                    new ProducerRecord<>(
-                            Topics.SPATIAL_EXTENSION_LIFE_DATA_TOPIC_PREFIX + targetEntity.getId(),
-                            KafkaProducerService.originatorId + "/" + UUID.randomUUID().toString(),
-                            kafkaMessage
-                    )
-            );
-        }
+        KafkaProducerService.this.kafkaProducer.send(
+                new ProducerRecord<>(
+                        Topics.SPATIAL_EXTENSION_LIFE_DATA_TOPIC_PREFIX + targetId,
+                        KafkaProducerService.originatorId + "/" + UUID.randomUUID().toString(),
+                        kafkaMessage
+                )
+        );
 
     }
 
