@@ -200,17 +200,6 @@ public class ExtensionResource {
                     return spatialDataUpdate;
                 });
 
-//        Object updatedSpatialEntity = this.dataValidationAndMergeService.processUpdate(entityId, rawJSON).get();
-//
-//        SpatialOperation spatialOperation = new SpatialOperation();
-//        spatialOperation.setOperationType(OperationType.Altered);
-//        spatialOperation.setTargetId(entityId);
-//
-//        this.kafkaProducerService.publish(spatialOperation, updatedSpatialEntity);
-//
-//        return spatialOperation;
-
-
     }
 
 

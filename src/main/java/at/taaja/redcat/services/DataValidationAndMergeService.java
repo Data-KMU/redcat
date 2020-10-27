@@ -3,37 +3,81 @@ package at.taaja.redcat.services;
 import at.taaja.redcat.repositories.ExtensionAsObjectRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.exc.MismatchedInputException;
-import com.google.common.collect.Lists;
 import io.quarkus.runtime.ShutdownEvent;
 import io.quarkus.runtime.StartupEvent;
-import io.taaja.kafka.Topics;
 import io.taaja.models.message.data.update.SpatialDataUpdate;
 import io.taaja.models.record.spatial.SpatialEntity;
-import lombok.Getter;
 import lombok.extern.jbosslog.JBossLog;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 import javax.ws.rs.BadRequestException;
 import java.io.IOException;
-import java.util.*;
-import java.util.concurrent.Callable;
+import java.time.Instant;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 
 @JBossLog
 @ApplicationScoped
 public class DataValidationAndMergeService {
 
-    public static final String MODIFIED = "modified";
+    public static final String MODIFIED = "_modified";
 
-    public static final List<String> DATA_PROPERTIES =   Arrays.asList("actuators", "sensors", "samplers");
+    public static final Set<String> DATA_PROPERTIES = Set.of("actuators", "sensors", "samplers");
+
+    private static class MergingContext{
+
+        private final AtomicBoolean _changed = new AtomicBoolean(false);
+        private final Set<String> _keysToIterate;
+        private final long _modified;
+        private final MergingContext _parentContext;
+
+
+        private MergingContext(Set<String> keysToIterate) {
+            this._keysToIterate = keysToIterate;
+            this._modified = Instant.now().getEpochSecond();
+            this._parentContext = null;
+        }
+
+        private MergingContext(MergingContext parentContext, Set<String> keysToIterate) {
+            this._keysToIterate = keysToIterate;
+            this._modified = parentContext._modified;
+            this._parentContext = parentContext;
+
+        }
+
+        public boolean hasDataChanged(){
+            return
+                    this._parentContext == null
+                            ? this._changed.get()
+                            : this._changed.get() || this._parentContext.hasDataChanged() ;
+        }
+
+        public void markDataAsChanged(){
+            this._changed.set(true);
+            if(this._parentContext != null){
+                this._parentContext.markDataAsChanged();
+            }
+        }
+
+        public long getModified(){
+            return this._modified;
+        }
+
+        public Iterable<String> getKeyIterable(){
+            return this._keysToIterate;
+        }
+
+    }
+
 
     private ObjectMapper objectMapper;
     private ExecutorService taskExecutor;
@@ -72,23 +116,6 @@ public class DataValidationAndMergeService {
     }
 
 
-    public Future<Object> processUpdate(String extensionId, String rawJSON) {
-        return this.taskExecutor.submit(new MergeTask(extensionId, rawJSON));
-    }
-
-    public Future<Object> processUpdate(ConsumerRecord<String, String> record) {
-        return this.taskExecutor.submit(
-                new MergeTask(
-                        this.getIdFromTopic(record.topic()),
-                        record.value()
-                )
-        );
-    }
-
-    private final String getIdFromTopic(String topic){
-        return topic.substring(Topics.SPATIAL_EXTENSION_LIFE_DATA_TOPIC_PREFIX.length());
-    }
-
     public SpatialEntity processMetaUpdate(String entityId, LinkedHashMap<String, Object> parsedJson) {
 
         LinkedHashMap<String, Object> original = (LinkedHashMap) this.extensionAsObjectRepository.findByIdOrException(entityId);
@@ -97,35 +124,61 @@ public class DataValidationAndMergeService {
         propertiesToProcess.removeAll(DATA_PROPERTIES);
         propertiesToProcess.remove("_id");
 
-        this.deepMerge(original, parsedJson,propertiesToProcess);
+        MergingContext mergingContext = new MergingContext(propertiesToProcess);
 
-        return null;
+        this.deepMerge(mergingContext, original, parsedJson);
+
+        SpatialEntity newSpatialEntity = null;
+
+        if(mergingContext.hasDataChanged()){
+            //parse to check
+            newSpatialEntity = this.objectMapper.convertValue(original, SpatialEntity.class);
+            this.extensionAsObjectRepository.update(entityId, original);
+        }
+
+        return newSpatialEntity;
     }
 
     public SpatialDataUpdate processDataUpdate(String entityId, LinkedHashMap<String, Object> parsedJson) {
 
         LinkedHashMap<String, Object> original = (LinkedHashMap) this.extensionAsObjectRepository.findByIdOrException(entityId);
 
-        this.deepMerge(original, parsedJson, DATA_PROPERTIES);
+        MergingContext mergingContext = new MergingContext(DATA_PROPERTIES);
 
-        return null;
+        this.deepMerge(mergingContext, original, parsedJson);
+
+        SpatialDataUpdate spatialDataUpdate = null;
+
+        if(mergingContext.hasDataChanged()){
+            original.put("messageChannel", "spatialDataUpdate");
+            spatialDataUpdate = objectMapper.convertValue(original, SpatialDataUpdate.class);
+            original.remove("messageChannel");
+            this.extensionAsObjectRepository.update(entityId, original);
+        }
+
+        return spatialDataUpdate;
     }
 
-    private void deepMerge(final Map<String, Object> original, final Map<String, Object> newData, Iterable<String> keysToProcess){
+    private void deepMerge(final MergingContext mergingContext, final Map<String, Object> original, final Map<String, Object> newData){
 
-        keysToProcess.forEach(key -> {
+        mergingContext.getKeyIterable().forEach(key -> {
 
             //new data key exists / no key in old
             if(newData.containsKey(key)) {
+
+                Object newValue = newData.get(key);
+
                 if (original.containsKey(key)) {
                     //merge
 
                     Object originalValue = original.get(key);
-                    Object newValue = newData.get(key);
 
                     //delete if null
                     if(newValue == null){
                         original.remove(key);
+                        original.put(MODIFIED, mergingContext.getModified());
+                        mergingContext.markDataAsChanged();
+                        return;
                     }
 
                     if(newValue instanceof List && originalValue instanceof List){
@@ -133,158 +186,76 @@ public class DataValidationAndMergeService {
                         List<Object> newValueList = (List) newValue;
                         List<Object> originalValueList = (List) originalValue;
 
-                        deepMerge(originalValueList, newValueList);
+                        deepMerge(mergingContext, originalValueList, newValueList);
 
                     } else if(newValue instanceof Map && originalValue instanceof Map){
                         // merge Map
                         Map<String, Object> newValueMap = (Map) newValue;
                         Map<String, Object> originalValueMap = (Map) originalValue;
 
-                        deepMerge(originalValueMap, newValueMap, newValueMap.keySet());
+                        deepMerge(new MergingContext(mergingContext, newValueMap.keySet()), originalValueMap, newValueMap);
                     }else {
                         //overwrite simple
-                        original.put(key, newData.get(key));
+                        if(!newValue.equals(originalValue)){
+                            original.put(key, newData.get(key));
+                            mergingContext.markDataAsChanged();
+                        }
                     }
-
                 } else {
                     //add
-
-                    Object insert = newData.get(key);
-                    if(insert != null){
-                        original.put(key, insert);
+                    if(newValue != null){
+                        original.put(key, newValue);
+                        mergingContext.markDataAsChanged();
                     }
                 }
+
+                //propagate modified to root
+                if(mergingContext.hasDataChanged()){
+                    original.put(MODIFIED, mergingContext.getModified());
+                }
+
             }
 
         });
-
     }
 
-    private void deepMerge(final List<Object> original, final List<Object> newData){
+    private void deepMerge(final MergingContext mergingContext, final List<Object> original, final List<Object> newData){
 
         for (int i = 0; i < newData.size(); i++){
             Object currentNewListObject = newData.get(i);
 
-            if(i == original.size()){
+            if (i == original.size()){
                 original.add(currentNewListObject);
+                mergingContext.markDataAsChanged();
                 continue;
             }
 
             Object currentOriginalListObject = original.get(i);
 
-            if(currentNewListObject instanceof Map && currentOriginalListObject instanceof Map){
+            if (currentNewListObject instanceof Map && currentOriginalListObject instanceof Map){
                 Map<String, Object> newValueMap = (Map) currentNewListObject;
                 Map<String, Object> originalValueMap = (Map) currentOriginalListObject;
 
-                deepMerge(newValueMap, originalValueMap, newValueMap.keySet());
-            }else if(currentNewListObject instanceof List && currentOriginalListObject instanceof List){
+                deepMerge(new MergingContext(mergingContext, newValueMap.keySet()), newValueMap, originalValueMap);
+            } else if(currentNewListObject instanceof List && currentOriginalListObject instanceof List){
                 List<Object> newValueList = (List) currentNewListObject;
                 List<Object> originalValueList = (List) currentOriginalListObject;
 
-                deepMerge(newValueList, originalValueList);
-            }else {
-                original.set(i, currentNewListObject);
-            }
+                deepMerge(mergingContext, newValueList, originalValueList);
+            } else {
 
-
-        }
-
-
-    }
-
-
-    @Getter
-    private class MergeTask implements Callable<Object>{
-        private final String id;
-        private final String value;
-
-
-        public MergeTask(String extensionId, String rawJSON){
-            this.id = extensionId;
-            this.value = rawJSON;
-        }
-
-        @Override
-        public Object call() throws Exception {
-            log.info("update extension " + id);
-
-            Object extension = extensionAsObjectRepository.findByIdOrException(id);
-
-            //check if objekt has changed in meta
-
-            //fix
-            int coordinatesCount = 0;
-            try{
-                coordinatesCount =  ((List)((Map)extension).get("coordinates")).size();
-            }catch (NullPointerException npe){
-                //nothing
-            }
-
-            ObjectReader updater = objectMapper.readerForUpdating(extension);
-            Object updatedExtension = updater.readValue(value);
-
-            this.updateCoordinates(coordinatesCount, updatedExtension);
-
-            this.addOrCheckModify(updatedExtension);
-
-            //parse to validate
-            SpatialEntity spatialEntity = objectMapper.convertValue(updatedExtension, SpatialEntity.class);
-
-            if(! id.equals(spatialEntity.getId())){
-                throw new Exception("Id change is not allowed new id: " + spatialEntity.getId() + ", old id: " + id);
-            }
-
-            extensionAsObjectRepository.update(id, updatedExtension);
-
-            return updatedExtension;
-        }
-
-        private void updateCoordinates(int coordinatesCount, Object updatedExtension) {
-            try{
-                Map<String, Object> updatedExtensionMap = (Map)updatedExtension;
-
-                List co1 = (List)updatedExtensionMap.get("coordinates");
-
-                if(co1.size() != coordinatesCount && coordinatesCount > 0){
-                    co1.remove(0);
-                }
-            }catch (Exception e){
-                log.warn("cant updare coordinates " + e.getMessage(), e);
-            }
-        }
-
-        private void addOrCheckModify(Object rawSpatialEntity) {
-
-            Map<String, Object> root = (Map)rawSpatialEntity;
-
-            //root level
-            for (Object data : Lists.newArrayList(
-                    root.get("actuators"),
-                    root.get("sensors"),
-                    root.get("samplers")
-            )){
-                try{
-                    //Map: vehicleId, vehicleData
-                    Map<String, Object> vehicleData = (Map)data;
-
-                    //for Entries (id -> Data)
-                    for (Object entry : vehicleData.values()){
-
-                        //vehicle properties (data)
-                        Map<String, Object> dataEntry = (Map) entry;
-
-                        if(! dataEntry.containsKey(MODIFIED)){
-                            dataEntry.put(MODIFIED, new Date());
-                        }
-                    }
-                }catch (Exception e){
-                    log.info("cant update modified " + e.getMessage(), e);
+                //check if ob are null
+                if(
+                        (currentNewListObject == null && currentOriginalListObject != null)
+                    || (currentNewListObject != null && ! currentNewListObject.equals(currentOriginalListObject))
+                ){
+                    original.set(i, currentNewListObject);
+                    mergingContext.markDataAsChanged();
                 }
             }
+
         }
 
-
     }
-
 
 }
