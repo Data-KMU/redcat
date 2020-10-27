@@ -68,35 +68,4 @@ public class KafkaProducerService {
 
     }
 
-
-
-
-//    @JsonView({SpatialRecordView.Identity.class})
-//    public void publish(SpatialOperation spatialOperation, Object spatialEntity) {
-//        this.publish(spatialOperation, this.objectMapper.convertValue(spatialEntity, SpatialEntity.class));
-//    }
-//
-//    @JsonView({SpatialRecordView.Identity.class})
-//    public void publish(final SpatialOperation spatialOperation, final SpatialEntity spatialEntity) {
-//
-//            ArrayList<String> idList = new ArrayList<>();
-//            for(SpatialEntity spatialEntityFromInfo : locationInformation.getSpatialEntities()){
-//                idList.add(spatialEntityFromInfo.getId());
-//            }
-//            spatialOperation.setIntersectingExtensions(idList);
-//
-//            for(String idsToUpdate : idList){
-//
-//                String messageUUID = UUID.randomUUID().toString();
-////                this.idTrackerService.addId(messageUUID);
-//                KafkaProducerService.this.kafkaProducer.send(
-//                    new ProducerRecord<>(
-//                        Topics.SPATIAL_EXTENSION_LIFE_DATA_TOPIC_PREFIX + idsToUpdate,
-//                        messageUUID,
-//                        spatialOperation
-//                    )
-//                );
-//            }
-//        });
-//    }
 }

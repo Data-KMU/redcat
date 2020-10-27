@@ -2,6 +2,7 @@ package at.taaja.redcat.services;
 
 import io.quarkus.runtime.ShutdownEvent;
 import io.quarkus.runtime.StartupEvent;
+import io.smallrye.mutiny.Uni;
 import io.taaja.kafka.Topics;
 import lombok.extern.jbosslog.JBossLog;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -71,7 +72,9 @@ public class KafkaDataConsumerService {
 
 
                     if(!record.key().startsWith(KafkaProducerService.originatorId)){
-                        KafkaDataConsumerService.this.dataValidationAndMergeService.processUpdate(record);
+                        KafkaDataConsumerService.this.dataValidationAndMergeService.processKafkaUpdate(
+                                Uni.createFrom().item(record)
+                        );
                     }
 
                 }

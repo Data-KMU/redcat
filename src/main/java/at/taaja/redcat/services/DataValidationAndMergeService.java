@@ -6,9 +6,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.exc.MismatchedInputException;
 import io.quarkus.runtime.ShutdownEvent;
 import io.quarkus.runtime.StartupEvent;
+import io.smallrye.mutiny.Uni;
+import io.smallrye.mutiny.groups.UniSubscribe;
+import io.taaja.kafka.Topics;
+import io.taaja.models.message.KafkaMessage;
 import io.taaja.models.message.data.update.SpatialDataUpdate;
 import io.taaja.models.record.spatial.SpatialEntity;
 import lombok.extern.jbosslog.JBossLog;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.event.Observes;
@@ -114,6 +119,29 @@ public class DataValidationAndMergeService {
             //do nothing
         }
     }
+
+
+    public void processKafkaUpdate(Uni<ConsumerRecord<String, String>> uniRecord) {
+        uniRecord.onItem().invoke(stringStringConsumerRecord -> {
+            String rawInput = stringStringConsumerRecord.value();
+            String entityId = this.getIdFromTopic(stringStringConsumerRecord.topic());
+
+            try {
+                LinkedHashMap<String, Object> kafkaMessage = this.checkRawInput(rawInput, entityId);
+                this.processDataUpdate(entityId,kafkaMessage);
+
+            }catch (Exception e){
+                log.error("cant process kafka message. error" + e.getMessage(), e);
+                return;
+            }
+
+        }).subscribe();
+    }
+
+    private final String getIdFromTopic(String topic){
+        return topic.substring(Topics.SPATIAL_EXTENSION_LIFE_DATA_TOPIC_PREFIX.length());
+    }
+
 
 
     public SpatialEntity processMetaUpdate(String entityId, LinkedHashMap<String, Object> parsedJson) {
