@@ -9,11 +9,6 @@ kafka:
   offset-reset: "latest"
   group-id: "redcat"
 
-  prefix:
-    zone: "zone"
-    vehicle-data: "vehicle-data"
-
-
 quarkus:
   swagger-ui:
     always-include: true
@@ -23,8 +18,9 @@ quarkus:
   mongodb:
     connection-string: mongodb://taaja-mongodb:27017
 
-purple-tiger:
-  url: "https://purpletiger.taaja.io//v1/calculate/intersectingExtensions"
+services.purple-tiger:
+  timeout: 3000
+  url: "https://purpletiger.taaja.io"
 
 "%dev":
   app:
@@ -36,8 +32,8 @@ purple-tiger:
     mongodb:
       connection-string: mongodb://localhost:27017
 
-  purple-tiger:
-    url: "http://localhost:8093/v1/calculate/intersectingExtensions"
+  services.purple-tiger:
+    url: "http://localhost:8093"
 
 "%test":
   app:

@@ -7,11 +7,10 @@ import com.fasterxml.jackson.databind.exc.MismatchedInputException;
 import io.quarkus.runtime.ShutdownEvent;
 import io.quarkus.runtime.StartupEvent;
 import io.smallrye.mutiny.Uni;
-import io.smallrye.mutiny.groups.UniSubscribe;
 import io.taaja.kafka.Topics;
-import io.taaja.models.message.KafkaMessage;
 import io.taaja.models.message.data.update.SpatialDataUpdate;
 import io.taaja.models.record.spatial.SpatialEntity;
+import io.taaja.services.AbstractService;
 import lombok.extern.jbosslog.JBossLog;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 
@@ -32,7 +31,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 @JBossLog
 @ApplicationScoped
-public class DataValidationAndMergeService {
+public class DataValidationAndMergeService extends AbstractService {
 
     public static final String MODIFIED = "_modified";
 
