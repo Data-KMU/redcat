@@ -15,6 +15,8 @@ kafka:
 
 
 quarkus:
+  swagger-ui:
+    always-include: true
   http:
     port: 8092
     cors: true
@@ -22,13 +24,15 @@ quarkus:
     connection-string: mongodb://taaja-mongodb:27017
 
 purple-tiger:
-  url: "http://purpletiger:8093/v1/calculate/intersectingExtensions"
+  url: "https://purpletiger.taaja.io//v1/calculate/intersectingExtensions"
 
 "%dev":
   app:
     database: "dev-taaja"
 
   quarkus:
+    swagger-ui:
+      always-include: true
     mongodb:
       connection-string: mongodb://localhost:27017
 
@@ -42,6 +46,3 @@ purple-tiger:
   quarkus:
     mongodb:
       connection-string: mongodb://localhost:27017
-
-  purple-tiger:
-    url: "http://localhost:8093/v1/calculate/intersectingExtensions"

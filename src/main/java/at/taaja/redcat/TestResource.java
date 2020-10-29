@@ -5,13 +5,15 @@ import com.google.common.collect.Lists;
 import io.taaja.models.generic.Coordinates;
 import io.taaja.models.generic.LocationInformation;
 import io.taaja.models.message.data.update.SpatialDataUpdate;
-import io.taaja.models.message.data.update.actuator.AbstractActuatorUpdate;
-import io.taaja.models.message.data.update.actuator.PositionUpdate;
+import io.taaja.models.message.data.update.impl.PositionUpdate;
 import io.taaja.models.message.extension.operation.OperationType;
 import io.taaja.models.message.extension.operation.SpatialOperation;
 import io.taaja.models.record.spatial.*;
 
-import javax.ws.rs.*;
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
+import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import java.util.*;
 
@@ -35,8 +37,8 @@ public class TestResource {
         coordinates.setLatitude(11.12f);
         coordinates.setLongitude(46.34f);
         positionUpdate.setPosition(coordinates);
-        SpatialDataUpdate spatialDataUpdate = new SpatialDataUpdate(UUID.randomUUID().toString(), positionUpdate);
-        Map<String, AbstractActuatorUpdate> actuators = spatialDataUpdate.getActuators();
+        SpatialDataUpdate spatialDataUpdate = new SpatialDataUpdate().addActuatorData(UUID.randomUUID().toString(), positionUpdate);
+        Map<String, Object> actuators = spatialDataUpdate.getActuators();
 
 
         Corridor corridor = new Corridor();
@@ -47,9 +49,7 @@ public class TestResource {
         corridor.setPriority(ExtensionPriority.VERY_HIGH_PRIORITY);
 
 
-        List<List<Waypoint>> wpl = new ArrayList<>();
         List<Waypoint> waypoints = new ArrayList<>();
-        wpl.add(waypoints);
 
         Waypoint waypoint = new Waypoint();
         waypoint.setAltitude(1000f);
@@ -58,7 +58,7 @@ public class TestResource {
         waypoint.setAdditionalData("additional data");
         waypoints.add(waypoint);
 
-        corridor.setCoordinates(wpl);
+        corridor.setCoordinates(waypoints);
         corridor.setActuators(actuators);
 
         Area area = new Area();

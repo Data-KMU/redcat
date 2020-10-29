@@ -1,0 +1,163 @@
+openapi: 3.0.1
+info:
+  title: Redcat 🐱
+  description: Exposes multi purpose REST API. Persists to DB, broadcast changes to Kafka
+  version: "1.3"
+
+servers:
+  - url: http://localhost:8092/
+    description: local dev
+  - url: https://redcat.taaja.io/
+    description: production
+
+paths:
+  /dev/example/{className}:
+    get:
+      summary: >
+        Returns an example of the stated class
+      description: Returns the JSON of a example instance of the given Type
+      parameters:
+        - name: className
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [Area, Corridor, SpatialEntity, SpatialDataUpdate, SpatialOperation, LocationInformation]
+          description: >
+            Type of the returned data
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json: {}
+  /v1/extension:
+    post:
+      summary: >
+          Creates a new SpatialEntity
+      description: >
+          Creates a new Entity and persists it in the DB. A stated ID is overwritten by server. The returned SpatialOperation is also published to Kafka
+
+      requestBody:
+        description: >
+          Needs a SpatialEntity as Body.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SpatialEntity'
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpatialOperation'
+  /v1/extension/{id}:
+    get:
+      summary: >
+        Returns a Spatial Entity with the given Id
+      description: >
+        Or returns 404 if no entity was found
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+            default: "c56b3543-6853-4d86-a7bc-1cde673a5582"
+          description: >
+            Id of the SpatialEntity
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpatialEntity'
+    put:
+      summary: >
+        Updates the Meta Information
+      description: >
+        Updates the Meta Information (like coordinates, type, etc.) of a the SpatialEntity with the given Id.
+        Returns a SpatialOperation. Note: changes in the fields actuators, sampler and sensors are ignored.
+        If a Id is stated in the, it must fit the id stated in the path
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: >
+            Id of the SpatialEntity (must fit the id in the submitted body - if one is present)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SpatialEntity'
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpatialOperation'
+    delete:
+      summary: >
+        Deletes a SpatialEntity
+      description: >
+        Deletes the SpatialEneity with the given id. The resulting SpatialOperation is also published to kafka
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: >
+            Id of the SpatialEntity
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpatialOperation'
+    patch:
+      summary: >
+        Updates the Traffic Information
+      description: >
+        Updates the Traffic Information (eg. the data stored in the properties actuators, sampler and sensors).
+        Changes in other properties are ignored. If a Id is stated in the, it must fit the id stated in the path
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: >
+            Id of the SpatialEntity (must fit the id in the submitted body - if one is present)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UniSpatialDataUpdate'
+components:
+  schemas:
+    SpatialEntity:
+      properties:
+
+    SpatialDataUpdate:
+      properties:
+
+    SpatialOperation:
+      properties:

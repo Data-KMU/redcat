@@ -41,7 +41,7 @@
     <dependency>
       <groupId>io.taaja</groupId>
       <artifactId>shared</artifactId>
-      <version>1.19</version>
+      <version>1.26</version>
     </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>
@@ -61,10 +61,10 @@
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-logging-gelf</artifactId>
     </dependency>
-<!--    <dependency>-->
-<!--      <groupId>io.quarkus</groupId>-->
-<!--      <artifactId>quarkus-quartz</artifactId>-->
-<!--    </dependency>-->
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-smallrye-openapi</artifactId>
+    </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-mongodb-client</artifactId>
@@ -99,6 +99,10 @@
 <!--      <version>4.4</version>-->
     </dependency>
 
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-resteasy-mutiny</artifactId>
+    </dependency>
 
     <dependency>
       <groupId>io.quarkus</groupId>
