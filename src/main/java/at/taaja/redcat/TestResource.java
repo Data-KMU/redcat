@@ -9,7 +9,9 @@ import io.taaja.models.message.data.update.impl.PositionUpdate;
 import io.taaja.models.message.extension.operation.OperationType;
 import io.taaja.models.message.extension.operation.SpatialOperation;
 import io.taaja.models.record.spatial.*;
+import org.eclipse.microprofile.openapi.annotations.Operation;
 
+import javax.enterprise.inject.Typed;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -25,6 +27,8 @@ public class TestResource {
 
     @GET
     @Path("/example/{className}")
+    @Operation(summary = "Returns an example of the stated class",
+            description = "Returns the JSON of a example instance of the given Type")
     public Object test(@PathParam("className") String className){
 
         if(className == null){

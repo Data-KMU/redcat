@@ -15,6 +15,7 @@ import io.taaja.models.message.extension.operation.SpatialOperation;
 import io.taaja.models.record.spatial.SpatialEntity;
 import io.taaja.models.views.SpatialRecordView;
 import lombok.SneakyThrows;
+import org.eclipse.microprofile.openapi.annotations.Operation;
 
 import javax.inject.Inject;
 import javax.ws.rs.*;
@@ -48,6 +49,8 @@ public class ExtensionResource {
      */
     @GET
     @Path("/{id}")
+    @Operation(summary = "Returns a Spatial Entity with the given Id",
+    description = "Or returns 404 if no entity was found")
     public Uni<Object> getExtension(@PathParam("id") String extensionId) {
             return Uni.createFrom().item(extensionId).onItem().apply(id -> extensionAsObjectRepository.findByIdOrException(id));
     }
@@ -60,6 +63,8 @@ public class ExtensionResource {
      */
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
+    @Operation(summary = "Creates a new SpatialEntity",
+            description = "Creates a new Entity and persists it in the DB. A stated ID is overwritten by server. The returned SpatialOperation is also published to Kafka")
     public Uni<SpatialOperation> addExtension(String rawBody) {
 
         return Uni.createFrom().item(rawBody)
@@ -96,6 +101,8 @@ public class ExtensionResource {
      */
     @DELETE
     @Path("/{id}")
+    @Operation(summary = "Deletes a SpatialEntity",
+            description = "Deletes the SpatialEntity with the given id. The resulting SpatialOperation is also published to kafka")
     public Uni<SpatialOperation> removeExtension(@PathParam("id") String extensionId) {
 
         return Uni.createFrom().item(extensionId)
@@ -136,6 +143,10 @@ public class ExtensionResource {
     @Path("/{id}")
     @SneakyThrows
     @Consumes(MediaType.APPLICATION_JSON)
+    @Operation(summary = "Updates the Meta Information",
+            description = "Updates the Meta Information (like coordinates, type, etc.) of a the SpatialEntity with the given Id. " +
+                    "Returns a SpatialOperation. Note: changes in the fields actuators, sampler and sensors are ignored. " +
+                    "If a Id is stated in the, it must fit the id stated in the path")
     public Uni<SpatialOperation> updateMetaData(
             final @PathParam("id") String entityId,
             final String rawBody
@@ -179,6 +190,9 @@ public class ExtensionResource {
     @SneakyThrows
     @JsonView({SpatialRecordView.Full.class})
     @Consumes(MediaType.APPLICATION_JSON)
+    @Operation(summary = "Updates the Traffic Information",
+            description = "Updates the Traffic Information (eg. the data stored in the properties actuators, sampler and sensors). " +
+                    "Changes in other properties are ignored. If a Id is stated in the, it must fit the id stated in the path")
     public Uni<SpatialDataUpdate> updateTrafficData(
             final @PathParam("id") String entityId,
             final String rawBody

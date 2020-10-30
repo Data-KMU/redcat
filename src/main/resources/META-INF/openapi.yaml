@@ -13,9 +13,6 @@ servers:
 paths:
   /dev/example/{className}:
     get:
-      summary: >
-        Returns an example of the stated class
-      description: Returns the JSON of a example instance of the given Type
       parameters:
         - name: className
           in: path
@@ -37,11 +34,6 @@ paths:
                   - $ref: '#/components/schemas/UniSpatialDataUpdate'
   /v1/extension:
     post:
-      summary: >
-          Creates a new SpatialEntity
-      description: >
-          Creates a new Entity and persists it in the DB. A stated ID is overwritten by server. The returned SpatialOperation is also published to Kafka
-
       requestBody:
         description: >
           Needs a SpatialEntity as Body.
@@ -58,11 +50,6 @@ paths:
                 $ref: '#/components/schemas/SpatialOperation'
   /v1/extension/{id}:
     get:
-      summary: >
-        Returns a Spatial Entity with the given Id
-      description: >
-        Or returns 404 if no entity was found
-
       parameters:
         - name: id
           in: path
@@ -81,12 +68,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/SpatialEntity'
     put:
-      summary: >
-        Updates the Meta Information
-      description: >
-        Updates the Meta Information (like coordinates, type, etc.) of a the SpatialEntity with the given Id.
-        Returns a SpatialOperation. Note: changes in the fields actuators, sampler and sensors are ignored.
-        If a Id is stated in the, it must fit the id stated in the path
       parameters:
         - name: id
           in: path
@@ -109,10 +90,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/SpatialOperation'
     delete:
-      summary: >
-        Deletes a SpatialEntity
-      description: >
-        Deletes the SpatialEntity with the given id. The resulting SpatialOperation is also published to kafka
       parameters:
         - name: id
           in: path
@@ -130,11 +107,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/SpatialOperation'
     patch:
-      summary: >
-        Updates the Traffic Information
-      description: >
-        Updates the Traffic Information (eg. the data stored in the properties actuators, sampler and sensors).
-        Changes in other properties are ignored. If a Id is stated in the, it must fit the id stated in the path
       parameters:
         - name: id
           in: path
@@ -159,20 +131,6 @@ paths:
 
 components:
   schemas:
-    ListString:
-      type: array
-      items:
-        type: string
-    OperationType:
-      enum:
-        - Altered
-        - Created
-        - Removed
-        - Unchanged
-      type: string
-    Date:
-      format: date
-      type: string
     UniSpatialOperation:
       type: object
       properties:
@@ -216,17 +174,28 @@ components:
           $ref: '#/components/schemas/Date'
         validUntil:
           $ref: '#/components/schemas/Date'
-    MapStringObject:
-      type: object
-      additionalProperties: {}
     UniSpatialDataUpdate:
       type: object
       properties:
         publisherId:
           type: string
         actuators:
-          $ref: '#/components/schemas/MapStringObject'
+          type: object
         samplers:
-          $ref: '#/components/schemas/MapStringObject'
+          type: object
         sensors:
-          $ref: '#/components/schemas/MapStringObject'
+          type: object
+    ListString:
+      type: array
+      items:
+        type: string
+    OperationType:
+      enum:
+        - Altered
+        - Created
+        - Removed
+        - Unchanged
+      type: string
+    Date:
+      format: date
+      type: string
