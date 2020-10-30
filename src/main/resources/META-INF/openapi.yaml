@@ -29,7 +29,12 @@ paths:
         "200":
           description: OK
           content:
-            application/json: {}
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/UniSpatialOperation'
+                  - $ref: '#/components/schemas/UniObject'
+                  - $ref: '#/components/schemas/UniSpatialDataUpdate'
   /v1/extension:
     post:
       summary: >
@@ -107,7 +112,7 @@ paths:
       summary: >
         Deletes a SpatialEntity
       description: >
-        Deletes the SpatialEneity with the given id. The resulting SpatialOperation is also published to kafka
+        Deletes the SpatialEntity with the given id. The resulting SpatialOperation is also published to kafka
       parameters:
         - name: id
           in: path
@@ -151,13 +156,77 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UniSpatialDataUpdate'
+
 components:
   schemas:
-    SpatialEntity:
+    ListString:
+      type: array
+      items:
+        type: string
+    OperationType:
+      enum:
+        - Altered
+        - Created
+        - Removed
+        - Unchanged
+      type: string
+    Date:
+      format: date
+      type: string
+    UniSpatialOperation:
+      type: object
       properties:
-
-    SpatialDataUpdate:
+        publisherId:
+          type: string
+        intersectingExtensions:
+          $ref: '#/components/schemas/ListString'
+        operationType:
+          $ref: '#/components/schemas/OperationType'
+        targetId:
+          type: string
+        timestamp:
+          $ref: '#/components/schemas/Date'
+    ExtensionBehaviour:
+      enum:
+        - Default
+        - ExclusionZone
+        - TrafficZone
+      type: string
+    UniObject:
+      type: object
       properties:
-
-    SpatialOperation:
+        actuators:
+          type: object
+        created:
+          $ref: '#/components/schemas/Date'
+        extensionBehaviour:
+          $ref: '#/components/schemas/ExtensionBehaviour'
+        _id:
+          type: string
+        priority:
+          format: int32
+          type: integer
+        properties:
+          type: object
+        samplers:
+          type: object
+        sensors:
+          type: object
+        validFrom:
+          $ref: '#/components/schemas/Date'
+        validUntil:
+          $ref: '#/components/schemas/Date'
+    MapStringObject:
+      type: object
+      additionalProperties: {}
+    UniSpatialDataUpdate:
+      type: object
       properties:
+        publisherId:
+          type: string
+        actuators:
+          $ref: '#/components/schemas/MapStringObject'
+        samplers:
+          $ref: '#/components/schemas/MapStringObject'
+        sensors:
+          $ref: '#/components/schemas/MapStringObject'
