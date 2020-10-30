@@ -25,4 +25,15 @@ public class KafkaConsumerService extends AbstractKafkaConsumerService {
             );
         }
     }
+
+    /**
+     * Use only groupName in groupId to allow clustering
+     * @param clientId
+     * @param groupName
+     * @return
+     */
+    @Override
+    protected String getGroupId(String clientId, String groupName) {
+        return groupName;
+    }
 }
