@@ -19,10 +19,9 @@ public class KafkaConsumerService extends AbstractKafkaConsumerService {
 
     @Override
     protected void processRecord(ConsumerRecord<String, String> record) {
+
         if(!record.key().startsWith(KafkaProducerService.originatorId)){
-            this.dataValidationAndMergeService.processKafkaUpdate(
-                    Uni.createFrom().item(record)
-            );
+            this.dataValidationAndMergeService.processKafkaUpdate(record);
         }
     }
 

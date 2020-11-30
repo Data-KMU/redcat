@@ -18,6 +18,7 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 import javax.ws.rs.BadRequestException;
+import javax.ws.rs.NotFoundException;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -120,21 +121,20 @@ public class DataValidationAndMergeService extends AbstractService {
     }
 
 
-    public void processKafkaUpdate(Uni<ConsumerRecord<String, String>> uniRecord) {
-        uniRecord.onItem().invoke(stringStringConsumerRecord -> {
+    public void processKafkaUpdate(ConsumerRecord<String, String> stringStringConsumerRecord) {
             String rawInput = stringStringConsumerRecord.value();
             String entityId = this.getIdFromTopic(stringStringConsumerRecord.topic());
 
+            LinkedHashMap<String, Object> kafkaMessage = this.checkRawInput(rawInput, entityId);
             try {
-                LinkedHashMap<String, Object> kafkaMessage = this.checkRawInput(rawInput, entityId);
-                this.processDataUpdate(entityId,kafkaMessage);
-
+                this.processDataUpdate(entityId, kafkaMessage);
+            }catch (NotFoundException nfe){
+                //insert Entity if not exists
+                kafkaMessage.put("_id", entityId);
+                this.extensionAsObjectRepository.insertOne(kafkaMessage);
             }catch (Exception e){
                 log.error("cant process kafka message. error" + e.getMessage(), e);
-                return;
             }
-
-        }).subscribe();
     }
 
     private final String getIdFromTopic(String topic){

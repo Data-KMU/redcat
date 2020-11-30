@@ -15,6 +15,7 @@ import io.taaja.models.message.extension.operation.SpatialOperation;
 import io.taaja.models.record.spatial.SpatialEntity;
 import io.taaja.models.views.SpatialRecordView;
 import lombok.SneakyThrows;
+import lombok.extern.jbosslog.JBossLog;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 
 import javax.inject.Inject;
@@ -24,9 +25,9 @@ import java.util.LinkedHashMap;
 import java.util.UUID;
 
 @Path("/v1/extension")
+@JBossLog
 @Produces(MediaType.APPLICATION_JSON)
 public class ExtensionResource {
-
 
     @Inject
     ExtensionAsObjectRepository extensionAsObjectRepository;
@@ -52,7 +53,7 @@ public class ExtensionResource {
     @Operation(summary = "Returns a Spatial Entity with the given Id",
     description = "Or returns 404 if no entity was found")
     public Uni<Object> getExtension(@PathParam("id") String extensionId) {
-            return Uni.createFrom().item(extensionId).onItem().apply(id -> extensionAsObjectRepository.findByIdOrException(id));
+        return Uni.createFrom().item(extensionId).onItem().apply(id -> extensionAsObjectRepository.findByIdOrException(id));
     }
 
 

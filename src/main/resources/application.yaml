@@ -3,7 +3,7 @@ app:
 
 
 kafka:
-  bootstrap-servers: "46.101.136.244:9092"
+  bootstrap-servers: "193.26.156.80:9092"
   poll-records: 100
   auto-commit: true
   offset-reset: "earliest"
@@ -17,6 +17,14 @@ quarkus:
     cors: true
   mongodb:
     connection-string: mongodb://taaja-mongodb:27017
+  log:
+    handler:
+      gelf:
+        enabled: true
+        #host: log.kara-software.at
+        host: 10.0.0.1
+#        host: 188.68.52.208
+        port: 12201
 
 services.purple-tiger:
   timeout: 3000
