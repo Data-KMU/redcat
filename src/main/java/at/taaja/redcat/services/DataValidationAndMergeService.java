@@ -130,8 +130,7 @@ public class DataValidationAndMergeService extends AbstractService {
                 this.processDataUpdate(entityId, kafkaMessage);
             }catch (NotFoundException nfe){
                 //insert Entity if not exists
-                kafkaMessage.put("_id", entityId);
-                this.extensionAsObjectRepository.insertOne(kafkaMessage);
+                log.warn("Update can't be processed because there is no entity with id " + entityId);
             }catch (Exception e){
                 log.error("cant process kafka message. error" + e.getMessage(), e);
             }
