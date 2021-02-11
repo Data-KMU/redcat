@@ -1,6 +1,5 @@
 package at.taaja.redcat.services;
 
-import io.smallrye.mutiny.Uni;
 import io.taaja.services.AbstractKafkaConsumerService;
 import lombok.extern.jbosslog.JBossLog;
 import org.apache.kafka.clients.consumer.ConsumerRecord;

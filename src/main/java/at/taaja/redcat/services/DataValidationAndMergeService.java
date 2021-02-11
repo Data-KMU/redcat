@@ -6,7 +6,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.exc.MismatchedInputException;
 import io.quarkus.runtime.ShutdownEvent;
 import io.quarkus.runtime.StartupEvent;
-import io.smallrye.mutiny.Uni;
 import io.taaja.kafka.Topics;
 import io.taaja.models.message.data.update.SpatialDataUpdate;
 import io.taaja.models.record.spatial.SpatialEntity;
@@ -36,7 +35,7 @@ public class DataValidationAndMergeService extends AbstractService {
 
     public static final String MODIFIED = "_modified";
 
-    public static final Set<String> DATA_PROPERTIES = Set.of("actuators", "sensors", "samplers");
+    public static final Set<String> DATA_PROPERTIES = Set.of("vehicleInformation", "sensorInformation", "metaInformation");
 
     private static class MergingContext{
 

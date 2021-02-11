@@ -7,11 +7,10 @@ import at.taaja.redcat.services.DataValidationAndMergeService;
 import at.taaja.redcat.services.IntersectingExtensionsService;
 import at.taaja.redcat.services.KafkaProducerService;
 import com.fasterxml.jackson.annotation.JsonView;
-import io.smallrye.mutiny.Uni;
 import io.taaja.models.generic.LocationInformation;
 import io.taaja.models.message.data.update.SpatialDataUpdate;
 import io.taaja.models.message.extension.operation.OperationType;
-import io.taaja.models.message.extension.operation.SpatialOperation;
+import io.taaja.models.message.extension.operation.SpatialEntityOperation;
 import io.taaja.models.record.spatial.SpatialEntity;
 import io.taaja.models.views.SpatialRecordView;
 import lombok.SneakyThrows;
@@ -24,10 +23,11 @@ import javax.ws.rs.core.MediaType;
 import java.util.LinkedHashMap;
 import java.util.UUID;
 
-@Path("/v1/extension")
 @JBossLog
+@Path("/v1/extension")
 @Produces(MediaType.APPLICATION_JSON)
 public class ExtensionResource {
+
 
     @Inject
     ExtensionAsObjectRepository extensionAsObjectRepository;
@@ -52,8 +52,8 @@ public class ExtensionResource {
     @Path("/{id}")
     @Operation(summary = "Returns a Spatial Entity with the given Id",
     description = "Or returns 404 if no entity was found")
-    public Uni<Object> getExtension(@PathParam("id") String extensionId) {
-        return Uni.createFrom().item(extensionId).onItem().apply(id -> extensionAsObjectRepository.findByIdOrException(id));
+    public Object getExtension(@PathParam("id") String extensionId) {
+        return extensionAsObjectRepository.findByIdOrException(extensionId);
     }
 
 
@@ -65,31 +65,22 @@ public class ExtensionResource {
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
     @Operation(summary = "Creates a new SpatialEntity",
-            description = "Creates a new Entity and persists it in the DB. A stated ID is overwritten by server. The returned SpatialOperation is also published to Kafka")
-    public Uni<SpatialOperation> addExtension(String rawBody) {
+            description = "Creates a new Entity and persists it in the DB. A stated ID is overwritten by server. The returned SpatialEntityOperation is also published to Kafka")
+    public SpatialEntityOperation addExtension(String rawBody) {
+        SpatialEntity spatialEntityFromString = this.dataValidationAndMergeService.checkRawInputAndStructure(rawBody, null, SpatialEntity.class);
 
-        return Uni.createFrom().item(rawBody)
+        spatialEntityFromString.setId(UUID.randomUUID().toString());
+        extensionAsObjectRepository.insertOne(spatialEntityFromString);
 
-                //check input
-                .onItem().apply(s -> this.dataValidationAndMergeService.checkRawInputAndStructure(s, null, SpatialEntity.class))
+        LocationInformation intersecting = this.intersectingExtensionsService.calculate(spatialEntityFromString);
 
-                //persist and retrieve intersecting entities
-                .onItem().apply(spatialEntity -> {
-                    spatialEntity.setId(UUID.randomUUID().toString());
-                    extensionAsObjectRepository.insertOne(spatialEntity);
-                    return this.intersectingExtensionsService.calculate(spatialEntity);
-                })
+        SpatialEntityOperation SpatialEntityOperation = new SpatialEntityOperation();
+        SpatialEntityOperation.setOperationType(OperationType.Created);
+        SpatialEntityOperation.setTargetId(intersecting.getOriginator().getId());
+        this.kafkaProducerService.publish(SpatialEntityOperation, intersecting.getSpatialEntities());
 
-                //publish
-                .onItem().apply(locationInformation -> {
-                    SpatialOperation spatialOperation = new SpatialOperation();
-                    spatialOperation.setOperationType(OperationType.Created);
-                    spatialOperation.setTargetId(locationInformation.getOriginator().getId());
+        return SpatialEntityOperation;
 
-                    this.kafkaProducerService.publish(spatialOperation, locationInformation.getSpatialEntities());
-
-                    return spatialOperation;
-                });
 
     }
 
@@ -103,33 +94,21 @@ public class ExtensionResource {
     @DELETE
     @Path("/{id}")
     @Operation(summary = "Deletes a SpatialEntity",
-            description = "Deletes the SpatialEntity with the given id. The resulting SpatialOperation is also published to kafka")
-    public Uni<SpatialOperation> removeExtension(@PathParam("id") String extensionId) {
+            description = "Deletes the SpatialEntity with the given id. The resulting SpatialEntityOperation is also published to kafka")
+    public SpatialEntityOperation removeExtension(@PathParam("id") String extensionId) {
+        SpatialEntity spatialEntity = this.extensionRepository.deleteOneByIdAndGet(extensionId);
+        if(spatialEntity == null){
+            throw new NotFoundException("entity not found");
+        }
 
-        return Uni.createFrom().item(extensionId)
+        LocationInformation intersecting = this.intersectingExtensionsService.calculate(spatialEntity);
 
-                //find item
-                .onItem().apply(id -> {
-                    SpatialEntity spatialEntity = this.extensionRepository.deleteOneByIdAndGet(id);
-                    if(spatialEntity == null){
-                        throw new NotFoundException("entity not found");
-                    }
-                    return spatialEntity;
-                })
+        SpatialEntityOperation SpatialEntityOperation = new SpatialEntityOperation();
+        SpatialEntityOperation.setOperationType(OperationType.Removed);
+        SpatialEntityOperation.setTargetId(intersecting.getOriginator().getId());
+        this.kafkaProducerService.publish(SpatialEntityOperation, intersecting.getSpatialEntities());
 
-                //calculate intersecting
-                .onItem().apply(spatialEntity -> this.intersectingExtensionsService.calculate(spatialEntity))
-
-                //return location info
-                .onItem().apply(locationInformation -> {
-                    SpatialOperation spatialOperation = new SpatialOperation();
-                    spatialOperation.setOperationType(OperationType.Removed);
-                    spatialOperation.setTargetId(locationInformation.getOriginator().getId());
-
-                    this.kafkaProducerService.publish(spatialOperation, locationInformation.getSpatialEntities());
-                    return spatialOperation;
-                });
-
+        return SpatialEntityOperation;
     }
 
 
@@ -146,37 +125,30 @@ public class ExtensionResource {
     @Consumes(MediaType.APPLICATION_JSON)
     @Operation(summary = "Updates the Meta Information",
             description = "Updates the Meta Information (like coordinates, type, etc.) of a the SpatialEntity with the given Id. " +
-                    "Returns a SpatialOperation. Note: changes in the fields actuators, sampler and sensors are ignored. " +
+                    "Returns a SpatialEntityOperation. Note: changes in the fields actuators, sampler and sensors are ignored. " +
                     "If a Id is stated in the, it must fit the id stated in the path")
-    public Uni<SpatialOperation> updateMetaData(
+    public SpatialEntityOperation updateMetaData(
             final @PathParam("id") String entityId,
             final String rawBody
     ){
-        return Uni.createFrom().voidItem()
-
-                .onItem().apply(aVoid -> {
-
-                    //check
-                    LinkedHashMap<String, Object> parsedJson = this.dataValidationAndMergeService.checkRawInput(rawBody, entityId);
+        LinkedHashMap<String, Object> parsedJson = this.dataValidationAndMergeService.checkRawInput(rawBody, entityId);
 
 
-                    SpatialOperation spatialOperation = new SpatialOperation();
-                    spatialOperation.setTargetId(entityId);
+        SpatialEntityOperation SpatialEntityOperation = new SpatialEntityOperation();
+        SpatialEntityOperation.setTargetId(entityId);
 
-                    //merge
-                    SpatialEntity changedSpatialEntity = this.dataValidationAndMergeService.processMetaUpdate(entityId, parsedJson);
+        //merge
+        SpatialEntity changedSpatialEntity = this.dataValidationAndMergeService.processMetaUpdate(entityId, parsedJson);
 
-                    if(changedSpatialEntity != null){
-                        spatialOperation.setOperationType(OperationType.Altered);
-                        LocationInformation intersecting = this.intersectingExtensionsService.calculate(changedSpatialEntity);
-                        this.kafkaProducerService.publish(spatialOperation, intersecting.getSpatialEntities());
-                    }else{
-                        spatialOperation.setOperationType(OperationType.Unchanged);
-                    }
+        if(changedSpatialEntity != null){
+            SpatialEntityOperation.setOperationType(OperationType.Altered);
+            LocationInformation intersecting = this.intersectingExtensionsService.calculate(changedSpatialEntity);
+            this.kafkaProducerService.publish(SpatialEntityOperation, intersecting.getSpatialEntities());
+        }else{
+            SpatialEntityOperation.setOperationType(OperationType.Unchanged);
+        }
 
-                    return spatialOperation;
-                });
-
+        return SpatialEntityOperation;
     }
 
     /**
@@ -194,26 +166,22 @@ public class ExtensionResource {
     @Operation(summary = "Updates the Traffic Information",
             description = "Updates the Traffic Information (eg. the data stored in the properties actuators, sampler and sensors). " +
                     "Changes in other properties are ignored. If a Id is stated in the, it must fit the id stated in the path")
-    public Uni<SpatialDataUpdate> updateTrafficData(
+    public SpatialDataUpdate updateTrafficData(
             final @PathParam("id") String entityId,
             final String rawBody
     ){
 
-        return Uni.createFrom().voidItem()
+        //check
+        LinkedHashMap<String, Object> parsedJson = this.dataValidationAndMergeService.checkRawInput(rawBody, entityId);
 
-                .onItem().apply(aVoid -> {
+        SpatialDataUpdate spatialDataUpdate = this.dataValidationAndMergeService.processDataUpdate(entityId, parsedJson);
 
-                    //check
-                    LinkedHashMap<String, Object> parsedJson = this.dataValidationAndMergeService.checkRawInput(rawBody, entityId);
+        if(spatialDataUpdate != null){
+            this.kafkaProducerService.publish(spatialDataUpdate, entityId);
+        }
 
-                    SpatialDataUpdate spatialDataUpdate = this.dataValidationAndMergeService.processDataUpdate(entityId, parsedJson);
+        return spatialDataUpdate;
 
-                    if(spatialDataUpdate != null){
-                        this.kafkaProducerService.publish(spatialDataUpdate, entityId);
-                    }
-
-                    return spatialDataUpdate;
-                });
 
     }
 
