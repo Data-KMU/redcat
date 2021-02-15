@@ -207,11 +207,15 @@ public class DataValidationAndMergeService extends AbstractService {
                     }
 
                     if(newValue instanceof List && originalValue instanceof List){
-                        // merge Array
-                        List<Object> newValueList = (List) newValue;
-                        List<Object> originalValueList = (List) originalValue;
+//                        // merge Array
+//                        List<Object> newValueList = (List) newValue;
+//                        List<Object> originalValueList = (List) originalValue;
+//
+//                        deepMerge(mergingContext, originalValueList, newValueList);
 
-                        deepMerge(mergingContext, originalValueList, newValueList);
+                        // overwrite lists
+                        original.put(key, newValue);
+                        mergingContext.markDataAsChanged();
 
                     } else if(newValue instanceof Map && originalValue instanceof Map){
                         // merge Map

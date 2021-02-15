@@ -15,11 +15,14 @@ public class KafkaConsumerService extends AbstractKafkaConsumerService {
     @Inject
     DataValidationAndMergeService dataValidationAndMergeService;
 
+    @Inject
+    KafkaProducerService kafkaProducerService;
+
 
     @Override
     protected void processRecord(ConsumerRecord<String, String> record) {
 
-        if(!record.key().startsWith(KafkaProducerService.originatorId)){
+        if(!record.key().startsWith(kafkaProducerService.getOriginID())){
             this.dataValidationAndMergeService.processKafkaUpdate(record);
         }
     }

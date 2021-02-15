@@ -43,7 +43,7 @@
     <dependency>
       <groupId>io.taaja</groupId>
       <artifactId>shared</artifactId>
-      <version>1.1.1</version>
+      <version>1.1.6</version>
     </dependency>
 
     <dependency>
@@ -107,6 +107,15 @@
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-smallrye-openapi</artifactId>
     </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-smallrye-reactive-messaging-kafka</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-smallrye-reactive-messaging</artifactId>
+    </dependency>
+
 
   </dependencies>
   <build>
