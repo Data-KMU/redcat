@@ -60,7 +60,7 @@ public class IntersectingExtensionsService extends AbstractIntersectingExtension
 
             LinkedHashMap<String, Object> input = objectMapper.readValue(response.getEntity().getContent(), LinkedHashMap.class);
             input.remove("elevation");
-            return  (LocationInformation) objectMapper.convertValue(input, LocationInformation.class);
+            return objectMapper.convertValue(input, LocationInformation.class);
 
 //            LocationInformation locationInformation = this.objectReader.readValue(response.getEntity().getContent());
 //            return (LocationInformation)this.objectReader.readValue(response.getEntity().getContent());
